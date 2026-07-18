@@ -5,7 +5,7 @@ Notes learned the hard way this session, baked in here so they aren't rediscover
 - The TCP server (port 12345) handles ONE connection at a time in a single blocking loop.
   A single connect -> send -> close per call keeps things reliable.
 - ">Camera Center" and ">Camera Stop" are no-ops in mTCPServer.py (literally `pass`).
-  To actually center the camera, set pan/tilt to angle 90 explicitly.
+  To actually center the pan/tilt mount, set pan/tilt to angle 90 explicitly.
 - ">Camera Left"/">Camera Right" (and Up/Down) both just set the servo to the
   absolute angle given in the command (0-180) - direction in the name doesn't matter,
   the value is not relative.
@@ -17,6 +17,15 @@ Notes learned the hard way this session, baked in here so they aren't rediscover
   Likely no real tilt axis on this 3-wheel model, or a mechanical bind mid-travel.
   Do NOT drive tilt to arbitrary values - camera_center() leaves tilt alone and only
   recenters pan. If you need tilt for something, test 0 and 180 only.
+- IMPORTANT (confirmed by user 2026-07-19): despite the "Camera" naming inherited from
+  the Freenove kit's protocol, SERVO2/SERVO3 (camera_pan/camera_tilt/camera_center,
+  ">Camera Left/Right/Up/Down") now physically drive the ULTRASONIC SENSOR MOUNT, not
+  the camera. The actual camera is mounted on the arm (fixed relative to it - see
+  perceive.py's "wrist-camera" framing, gripper fingers always in the bottom corners of
+  every snapshot). This is why look_around()/pan sweeps produce near-identical frames
+  regardless of angle: panning moves the ultrasonic turret, which is out of frame, while
+  the camera itself doesn't move. To actually look around the room, move the ARM
+  (arm.py) and/or drive the car chassis, not car.py pan/tilt.
 - Querying ultrasonic (">Ultrasonic") has, in this session, at times blocked the
   entire server indefinitely if the sensor wiring is bad, wedging ALL car control
   until the server process is killed and restarted. Use --timeout and treat a
@@ -117,11 +126,13 @@ def steer(direction, angle):
 
 
 def camera_pan(angle):
+    """Despite the name, this moves the ULTRASONIC MOUNT, not the camera - see module docstring."""
     angle = max(0, min(180, int(angle)))
     send(f">Camera Left{angle}")
 
 
 def camera_tilt(angle):
+    """Despite the name, this moves the ULTRASONIC MOUNT, not the camera - see module docstring."""
     angle = max(0, min(180, int(angle)))
     send(f">Camera Up{angle}")
 
@@ -186,6 +197,10 @@ def snapshot(path, timeout=DEFAULT_TIMEOUT):
 
 
 def look_around(outdir, angles=(0, 45, 90, 135, 180)):
+    """Sweeps the ULTRASONIC mount, not the camera (see module docstring) - the captured
+    frames will look near-identical across angles since the fixed arm-mounted camera
+    doesn't move. Useful for an ultrasonic sweep if that sensor is ever repaired, not
+    for visual look-around. To actually see around the room, move the arm/chassis."""
     paths = []
     for a in angles:
         camera_pan(a)
@@ -196,6 +211,121 @@ def look_around(outdir, angles=(0, 45, 90, 135, 180)):
         print(f"angle {a}: {path} ({size} bytes)")
     camera_center()
     return paths
+
+
+def _read_sonic_median(samples, timeout):
+    """A single echo often drops out (returns 0.0) or spikes - median of a few reads
+    with dropouts discarded is far steadier than any one reading."""
+    vals = []
+    for _ in range(samples):
+        try:
+            d = float(ultrasonic(timeout=timeout))
+        except Exception:
+            continue
+        if d > 0:
+            vals.append(d)
+    if not vals:
+        return None
+    vals.sort()
+    return vals[len(vals) // 2]
+
+
+def radar_sweep(lo=0, hi=180, step=5, move_delay=0.05, read_every=3, sonic_timeout=2.5,
+                samples=3, cycles=2, log=print):
+    """Smoothly sweep the ultrasonic mount back and forth (fine angle steps, short delay
+    between them) while periodically reading the distance, radar-style. Each reported
+    reading is the median of `samples` echoes (dropouts/zeros discarded) rather than a
+    single noisy echo. Returns the list of (angle, distance_cm_or_None) readings."""
+    one_way = list(range(lo, hi + 1, step))
+    if one_way[-1] != hi:
+        one_way.append(hi)
+    sweep = one_way + one_way[::-1][1:]  # lo -> hi -> lo, one full back-and-forth
+    readings = []
+    for cyc in range(cycles):
+        for i, a in enumerate(sweep):
+            camera_pan(a)
+            time.sleep(move_delay)
+            if i % read_every == 0:
+                d = _read_sonic_median(samples, sonic_timeout)
+                readings.append((a, d))
+                if log:
+                    log(f"[cycle {cyc+1}/{cycles}] {a:3d}°  {d if d is not None else '—'} см")
+    camera_center()
+    return readings
+
+
+def scan_profile(angles=(30, 60, 90, 120, 150), samples=3, settle=0.3):
+    """One angle->distance snapshot of what's around the car right now (ultrasonic mount
+    sweep, no driving). Used as a coarse "fingerprint" of the surroundings by
+    estimate_rotation_deg() to detect unwanted heading drift on a leg that has no other
+    feedback (no encoders, no cv2 for the camera-based navloop.py approach)."""
+    profile = {}
+    for a in angles:
+        camera_pan(a)
+        time.sleep(settle)
+        profile[a] = _read_sonic_median(samples, 2.5)
+    camera_center()
+    return profile
+
+
+def estimate_rotation_deg(before, after, max_shift_steps=3):
+    """Compare two scan_profile() readings (same angle keys) to estimate how much the
+    chassis heading rotated between them, by finding the angle-index shift that best
+    aligns the two distance profiles (min total abs difference over overlapping angles).
+
+    This is sonar scan-matching, not odometry - it only works if the surroundings have
+    some angular variation (a flat wall dead-on gives near-flat profiles both ways and
+    won't disambiguate rotation from translation). Treat the result as a hint, not a
+    measurement; cross-check with a deliberate small turn before trusting the sign.
+
+    SIGN, calibrated 2026-07-19 against a real known LEFT steer+pulse: a LEFT turn of
+    the chassis produces a NEGATIVE shift here (obstacles that used to read at a given
+    mount angle now read at a lower mount angle after the car rotates left under them).
+    So: positive returned degrees = chassis turned RIGHT; negative = turned LEFT.
+
+    Returns (drift_deg, cost) where cost is the avg cm mismatch at the best alignment -
+    high cost (tens of cm) means "don't trust this estimate", not "large drift".
+    """
+    angles = sorted(before)
+    step_deg = angles[1] - angles[0] if len(angles) > 1 else 30
+    before_vals = [before[a] for a in angles]
+    after_vals = [after[a] for a in angles]
+    n = len(angles)
+    best_shift, best_cost = 0, float("inf")
+    for shift in range(-max_shift_steps, max_shift_steps + 1):
+        cost, count = 0.0, 0
+        for i in range(n):
+            j = i + shift
+            if 0 <= j < n and before_vals[i] is not None and after_vals[j] is not None:
+                cost += abs(before_vals[i] - after_vals[j])
+                count += 1
+        if count >= 3:
+            avg_cost = cost / count
+            if avg_cost < best_cost:
+                best_cost, best_shift = avg_cost, shift
+    return -best_shift * step_deg, best_cost
+
+
+def move_verified(direction, mm, *, log=print):
+    """drive_mm wrapped with a before/after ultrasonic scan_profile comparison, so a
+    caller can detect "did this leg quietly turn the chassis" without asking the user
+    and without cv2 (navloop.py's camera-based verified-straight equivalent needs cv2,
+    not installed on this system as of 2026-07-19). Detection only, no auto-correction -
+    steering correction for arbitrary directions/legs isn't calibrated here the way
+    navloop.py's forward-only correction is.
+
+    Returns dict: before/after profiles, estimated drift_deg (+right/-left), match cost.
+    """
+    before = scan_profile()
+    drive_mm(direction, mm)
+    time.sleep(0.3)
+    after = scan_profile()
+    drift_deg, cost = estimate_rotation_deg(before, after)
+    if log:
+        trust = "" if cost < 15 else "  (high mismatch cost - low confidence)"
+        log(f"  [move_verified] {direction} {mm}mm: est. drift {drift_deg:+.0f}°"
+            f" (cost {cost:.1f} cm){trust}")
+    return {"before": before, "after": after, "drift_deg": drift_deg, "cost": cost}
 
 
 SERVER_DIR = "/home/astra/Freenove_Three-wheeled_Smart_Car_Kit_for_Raspberry_Pi/Server"
@@ -333,6 +463,15 @@ def main():
     look.add_argument("outdir")
     look.add_argument("--angles", default="0,45,90,135,180")
 
+    radar = sub.add_parser("radar", help="smooth back-and-forth ultrasonic sweep")
+    radar.add_argument("--lo", type=int, default=0)
+    radar.add_argument("--hi", type=int, default=180)
+    radar.add_argument("--step", type=int, default=5)
+    radar.add_argument("--move-delay", type=float, default=0.05)
+    radar.add_argument("--read-every", type=int, default=3)
+    radar.add_argument("--samples", type=int, default=3, help="reads per point, median-filtered")
+    radar.add_argument("--cycles", type=int, default=2)
+
     sub.add_parser("ultrasonic")
     sub.add_parser("status")
     sub.add_parser("restart-camera", help="restart just the hung mjpg-streamer (port 8090)")
@@ -361,6 +500,9 @@ def main():
     elif args.cmd == "look-around":
         angles = tuple(int(a) for a in args.angles.split(","))
         look_around(args.outdir, angles)
+    elif args.cmd == "radar":
+        radar_sweep(lo=args.lo, hi=args.hi, step=args.step, move_delay=args.move_delay,
+                   read_every=args.read_every, samples=args.samples, cycles=args.cycles)
     elif args.cmd == "ultrasonic":
         print(ultrasonic())
     elif args.cmd == "status":
