@@ -1,0 +1,17 @@
+# Python environment & caches
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Debug captures & rendered maps (derived output)
+*.jpg
+*.jpeg
+*.png
+
+# Derived ORB feature dumps
+nav_state/frames/
+
+# Orbit debug output (images + run logs)
+orbit_out/
+*.log

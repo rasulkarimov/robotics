@@ -1,0 +1,470 @@
+{
+  "created": "2026-07-17 22:32:03",
+  "frame": "x=forward-at-start(mm), y=left(mm), theta=deg CCW",
+  "pose": {
+    "x_mm": 200.0,
+    "y_mm": 0.0,
+    "theta_deg": 0.0
+  },
+  "trajectory": [
+    {
+      "x_mm": 0.0,
+      "y_mm": 0.0,
+      "theta_deg": 0.0,
+      "t": "2026-07-17 22:32:03",
+      "note": "init"
+    },
+    {
+      "x_mm": 200.0,
+      "y_mm": 0.0,
+      "theta_deg": 0.0,
+      "t": "2026-07-17 22:32:10",
+      "note": "forward 200mm"
+    }
+  ],
+  "keyframes": [],
+  "landmarks": [
+    {
+      "x_mm": 1269.3,
+      "y_mm": 513.0,
+      "z_mm": 1269.3,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 2494.9,
+      "y_mm": 270.1,
+      "z_mm": 2494.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1793.6,
+      "y_mm": 207.1,
+      "z_mm": 1793.6,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1616.9,
+      "y_mm": 198.4,
+      "z_mm": 1616.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 615.7,
+      "y_mm": 22.2,
+      "z_mm": 615.7,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 650.4,
+      "y_mm": 23.5,
+      "z_mm": 650.4,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 710.5,
+      "y_mm": 23.9,
+      "z_mm": 710.5,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 757.3,
+      "y_mm": 31.0,
+      "z_mm": 757.3,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 715.7,
+      "y_mm": 34.4,
+      "z_mm": 715.7,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 788.5,
+      "y_mm": 83.5,
+      "z_mm": 788.5,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 791.5,
+      "y_mm": 34.3,
+      "z_mm": 791.5,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 875.0,
+      "y_mm": 101.0,
+      "z_mm": 875.0,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1104.5,
+      "y_mm": 8.0,
+      "z_mm": 1104.5,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 942.2,
+      "y_mm": 40.8,
+      "z_mm": 942.2,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1056.8,
+      "y_mm": 10.2,
+      "z_mm": 1056.8,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1857.1,
+      "y_mm": 219.8,
+      "z_mm": 1857.1,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1784.3,
+      "y_mm": 206.0,
+      "z_mm": 1784.3,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1696.1,
+      "y_mm": 210.5,
+      "z_mm": 1696.1,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 744.1,
+      "y_mm": 25.8,
+      "z_mm": 744.1,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 834.9,
+      "y_mm": 94.0,
+      "z_mm": 834.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1197.9,
+      "y_mm": 10.4,
+      "z_mm": 1197.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1115.4,
+      "y_mm": 9.7,
+      "z_mm": 1115.4,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1570.2,
+      "y_mm": 13.6,
+      "z_mm": 1570.2,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1977.5,
+      "y_mm": 285.4,
+      "z_mm": 1977.5,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 2236.8,
+      "y_mm": 260.9,
+      "z_mm": 2236.8,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 2150.9,
+      "y_mm": 228.5,
+      "z_mm": 2150.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1883.7,
+      "y_mm": 226.2,
+      "z_mm": 1883.7,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 709.9,
+      "y_mm": 23.8,
+      "z_mm": 709.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 749.9,
+      "y_mm": 32.9,
+      "z_mm": 749.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 815.6,
+      "y_mm": 86.6,
+      "z_mm": 815.6,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 852.8,
+      "y_mm": 99.5,
+      "z_mm": 852.8,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1110.1,
+      "y_mm": 10.3,
+      "z_mm": 1110.1,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1204.2,
+      "y_mm": 11.1,
+      "z_mm": 1204.2,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1463.9,
+      "y_mm": 13.5,
+      "z_mm": 1463.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1795.0,
+      "y_mm": 223.0,
+      "z_mm": 1795.0,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 2096.0,
+      "y_mm": 225.6,
+      "z_mm": 2096.0,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 579.9,
+      "y_mm": 38.3,
+      "z_mm": 579.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 723.0,
+      "y_mm": 38.7,
+      "z_mm": 723.0,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 714.2,
+      "y_mm": 29.4,
+      "z_mm": 714.2,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 835.7,
+      "y_mm": 41.3,
+      "z_mm": 835.7,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 918.5,
+      "y_mm": 45.4,
+      "z_mm": 918.5,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1200.9,
+      "y_mm": 9.4,
+      "z_mm": 1200.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1567.9,
+      "y_mm": 12.3,
+      "z_mm": 1567.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 690.9,
+      "y_mm": 23.2,
+      "z_mm": 690.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 724.2,
+      "y_mm": 38.8,
+      "z_mm": 724.2,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 836.1,
+      "y_mm": 44.8,
+      "z_mm": 836.1,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1491.1,
+      "y_mm": 12.9,
+      "z_mm": 1491.1,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 571.7,
+      "y_mm": 39.2,
+      "z_mm": 571.7,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 604.0,
+      "y_mm": 23.3,
+      "z_mm": 604.0,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 717.7,
+      "y_mm": 40.6,
+      "z_mm": 717.7,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 726.5,
+      "y_mm": 32.4,
+      "z_mm": 726.5,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 846.7,
+      "y_mm": 47.9,
+      "z_mm": 846.7,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1148.9,
+      "y_mm": 10.0,
+      "z_mm": 1148.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 1848.9,
+      "y_mm": 16.1,
+      "z_mm": 1848.9,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 525.2,
+      "y_mm": 35.4,
+      "z_mm": 525.2,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 641.8,
+      "y_mm": 29.4,
+      "z_mm": 641.8,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 861.0,
+      "y_mm": 8.5,
+      "z_mm": 861.0,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 784.1,
+      "y_mm": 47.2,
+      "z_mm": 784.1,
+      "src": "motionmap"
+    },
+    {
+      "x_mm": 741.5,
+      "y_mm": 38.2,
+      "z_mm": 741.5,
+      "src": "motionmap"
+    }
+  ],
+  "calibration": {
+    "cal_speed": 55,
+    "cal_seconds": 0.5,
+    "cal_mm": 100.0,
+    "note": "open-loop dead reckoning, no odometry"
+  },
+  "map": {
+    "landmarks": [
+      {
+        "x_mm": 663.8,
+        "y_mm": 31.0,
+        "z_mm": 663.8,
+        "weight": 16
+      },
+      {
+        "x_mm": 802.8,
+        "y_mm": 51.1,
+        "z_mm": 802.8,
+        "weight": 14
+      },
+      {
+        "x_mm": 1142.3,
+        "y_mm": 9.9,
+        "z_mm": 1142.3,
+        "weight": 8
+      },
+      {
+        "x_mm": 1801.6,
+        "y_mm": 215.4,
+        "z_mm": 1801.6,
+        "weight": 6
+      },
+      {
+        "x_mm": 1523.3,
+        "y_mm": 13.1,
+        "z_mm": 1523.3,
+        "weight": 4
+      },
+      {
+        "x_mm": 911.9,
+        "y_mm": 62.4,
+        "z_mm": 911.9,
+        "weight": 3
+      },
+      {
+        "x_mm": 2193.9,
+        "y_mm": 244.7,
+        "z_mm": 2193.9,
+        "weight": 2
+      },
+      {
+        "x_mm": 1269.3,
+        "y_mm": 513.0,
+        "z_mm": 1269.3,
+        "weight": 1
+      },
+      {
+        "x_mm": 2494.9,
+        "y_mm": 270.1,
+        "z_mm": 2494.9,
+        "weight": 1
+      },
+      {
+        "x_mm": 1616.9,
+        "y_mm": 198.4,
+        "z_mm": 1616.9,
+        "weight": 1
+      },
+      {
+        "x_mm": 1977.5,
+        "y_mm": 285.4,
+        "z_mm": 1977.5,
+        "weight": 1
+      },
+      {
+        "x_mm": 2096.0,
+        "y_mm": 225.6,
+        "z_mm": 2096.0,
+        "weight": 1
+      },
+      {
+        "x_mm": 1848.9,
+        "y_mm": 16.1,
+        "z_mm": 1848.9,
+        "weight": 1
+      }
+    ]
+  }
+}
