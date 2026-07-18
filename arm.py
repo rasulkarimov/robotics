@@ -10,7 +10,10 @@ Setup notes (so they aren't rediscovered):
   framing as Hiwonder's serial bus-servo protocol, documented at docs.hiwonder.com).
   The `xarm` package + `hidapi` package implement this - use them, don't hand-roll it.
 - Lives in a venv (/home/astra/tools/venv) because pip install is blocked system-wide
-  (PEP 668). Always invoke via /home/astra/tools/venv/bin/python3.
+  (PEP 668). Always invoke via /home/astra/tools/venv/bin/python3. If the venv is ever
+  missing (e.g. after an SD card / environment reset), recreate it with:
+    python3 -m venv /home/astra/tools/venv
+    /home/astra/tools/venv/bin/pip install -r requirements.txt
 - A udev rule (/etc/udev/rules.d/99-hiwonder-xarm.rules) sets /dev/hidraw* for this
   VID:PID to mode 0666, but hidapi's open-by-VID/PID still failed as non-root for
   reasons not fully root-caused (plain file open() worked fine, so it's something
