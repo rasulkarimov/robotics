@@ -91,6 +91,12 @@ R_MAX = 200.0   # raised 178->200 on 2026-07-16 with the wider pitch band (pick_
 # grab-frame gains, measured live 2026-07-15 (differ from the LOOK frame, and are the whole
 # reason locate's base is wrong for grabbing -- FRAME MISMATCH). Higher base -> object moves
 # RIGHT (~2.5 px/base-unit); higher R -> object moves DOWN (~4.5 px/R-unit).
+#
+# Observed 2026-07-19 (post chassis-remount): center_grabframe() sometimes doesn't converge
+# within maxit and settles off-target (once landed with the blob clipped at the frame edge,
+# aspect/angle unreadable). Didn't re-derive these gains this session - if this keeps
+# happening, re-measure them fresh rather than trusting they're still right after the
+# remount, the same way rig.GRASP_Z needed re-measuring (see rig.py).
 BASE_PER_PX = 1 / 2.5
 R_PER_PX = 1 / 4.5
 
@@ -134,7 +140,10 @@ def center_grabframe(base, R, HIGH, tol=42, maxit=6):
         ex, ey = p[0] - GX, p[1] - GY
         if abs(ex) <= tol and abs(ey) <= tol:
             return base, R, p
-        base = int(max(360, min(620, base + max(-45, min(45, (GX - p[0]) * BASE_PER_PX)))))
+        # clamp widened 2026-07-19 (was 360-620, assumed the object stays in a narrow
+        # forward arc; a real object at base~780 got clamped down to 620 every
+        # correction step and was lost) - now just the arm's real servo travel limits.
+        base = int(max(150, min(850, base + max(-45, min(45, (GX - p[0]) * BASE_PER_PX)))))
         R = max(120.0, min(R_MAX, R + max(-14, min(14, (p[1] - GY) * R_PER_PX))))
         if grab2.pose(base, R, HIGH, 1000) is None:
             R = max(120.0, R - 8); continue
@@ -275,7 +284,7 @@ def main():
                          "angle each rep so the wrist self-corrects). >1 implies placing.")
     ap.add_argument("--drill", default="460:140",
                     help="base:R fixed spot the reps drill grabs from / places to.")
-    ap.add_argument("--outdir", default="/home/astra/tools/orbit_out")
+    ap.add_argument("--outdir", default="/home/astra/robotics/orbit_out")
     args = ap.parse_args()
 
     if args.base == "auto":

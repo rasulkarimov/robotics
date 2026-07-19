@@ -25,7 +25,11 @@ ARM_ABOVE_FLOOR = 110.0     # arm base height above the floor, now that it's on 
 # (close the jaws, step down 5 mm at a time until they touch), and don't trust a stale
 # value. There is no automatic contact detector - the arm is strong enough to LIFT THE CAR
 # rather than stall, so servo feedback stays clean while the wheels leave the ground.
-GRASP_Z = -75.0
+GRASP_Z = -65.0        # re-measured live 2026-07-19 with the user (stepped down in 5-10mm
+                       # increments, jaws closed, until confirmed touching floor; verified
+                       # by raising back up and re-descending to the same value). Was -75.0
+                       # before this session - a 10mm shift, within GRASP_Z_DRIFT below, so
+                       # this is ordinary drift, not evidence of a different arm mounting.
 GRASP_Z_DRIFT = 15.0   # observed spread between measurements; budget for it
 
 # The same floor, felt with the jaws OPEN. Closed jaws reach 20 mm LOWER than open ones,

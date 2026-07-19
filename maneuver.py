@@ -41,7 +41,7 @@ def level_cam():
     import subprocess
     for sid, pos in ((6, 500), (5, 514)):
         subprocess.run(["sudo", "/home/astra/tools/venv/bin/python3",
-                        "/home/astra/tools/arm.py", "move", str(sid), str(pos), "700"],
+                        "/home/astra/robotics/arm.py", "move", str(sid), str(pos), "700"],
                        capture_output=True)
     time.sleep(0.4)
 

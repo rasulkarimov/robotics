@@ -1,4 +1,4 @@
 #!/bin/sh
 # Wrapper: arm.py needs BOTH root (/dev/hidraw access) and the venv (xarm+hidapi).
 # Lets you type `~/tools/arm status` instead of the full sudo+venv-python incantation.
-exec sudo /home/astra/tools/venv/bin/python3 /home/astra/tools/arm.py "$@"
+exec sudo /home/astra/tools/venv/bin/python3 /home/astra/robotics/arm.py "$@"

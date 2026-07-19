@@ -37,7 +37,7 @@ import kin
 import pick
 import rig
 
-ARM = "/home/astra/tools/arm"
+ARM = "/home/astra/robotics/arm"
 OPEN, CLAMP = 156, 640
 PITCH_LO, PITCH_HI = 145.0, 195.0
 # How far to nudge the arm when measuring the Jacobian. Must stay SMALL: the wrist camera
@@ -49,7 +49,7 @@ MAX_STEP_MM = 18.0              # never lunge so far that the target leaves the 
 
 
 def arm_step(moves, ms=1200):
-    subprocess.run([ARM, "step", moves, "/home/astra/tools/calib/_tmp.jpg", str(ms)],
+    subprocess.run([ARM, "step", moves, "/home/astra/robotics/calib/_tmp.jpg", str(ms)],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
 
@@ -291,7 +291,7 @@ def pick_object(iters=8, tol_px=25.0):
             return False
         x, y = nx, ny
 
-    cv2.imwrite("/home/astra/tools/calib/pre_grasp_eye.jpg", pick.frame())
+    cv2.imwrite("/home/astra/robotics/calib/pre_grasp_eye.jpg", pick.frame())
     arm_step(f"1:{CLAMP}", 900)
     print("  сомкнул. (Показание клешни ничего не доказывает — проверяем подъёмом.)")
     goto(x, y, rig.GRASP_Z + 90.0, 1500)      # lift, jaws stay shut

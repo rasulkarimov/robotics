@@ -99,7 +99,7 @@ def main(argv=None):
     ap.add_argument("--reps", type=int, default=1, help="run a grab+place DRILL this many times")
     ap.add_argument("--drill", default="460:140", help="base:R fixed spot the drill uses")
     ap.add_argument("--max-attempts", type=int, default=MAX_ATTEMPTS)
-    ap.add_argument("--outdir", default="/home/astra/tools/orbit_out")
+    ap.add_argument("--outdir", default="/home/astra/robotics/orbit_out")
     args = ap.parse_args(argv)
 
     # Hardware/vision imports happen HERE, lazily, so `import grasp` (and --selftest)

@@ -29,7 +29,7 @@ def pose(base, R, z, ms=1600):
                       pitch_hi=pe.FIXED_PITCH+pe.PITCH_BAND, prefer=pe.FIXED_PITCH)
     if not s: return None
     s[6] = base
-    subprocess.run(["/home/astra/tools/arm","step", ",".join(f"{j}:{s[j]}" for j in (6,5,4,3)),
+    subprocess.run(["/home/astra/robotics/arm","step", ",".join(f"{j}:{s[j]}" for j in (6,5,4,3)),
                     "/tmp/x.jpg", str(ms)], stdout=subprocess.DEVNULL)
     return x, y
 

@@ -20,8 +20,8 @@ sys.path.insert(0, "/home/astra/tools")
 import numpy as np, cv2
 import kin, rig, pick, pick_eye as pe, grab2
 
-ARM = "/home/astra/tools/arm"
-CAR = "/home/astra/tools/car.py"
+ARM = "/home/astra/robotics/arm"
+CAR = "/home/astra/robotics/car.py"
 
 
 def sh(args, ms=1000):
@@ -31,7 +31,7 @@ def sh(args, ms=1000):
 
 def get_servo(j):
     out = subprocess.run(["sudo", "/home/astra/tools/venv/bin/python3",
-                          "/home/astra/tools/arm.py", "get", str(j)],
+                          "/home/astra/robotics/arm.py", "get", str(j)],
                          capture_output=True, text=True)
     import re
     m = re.search(r"(\d+)", out.stdout)
@@ -132,7 +132,7 @@ def grab_verified(base, R, gz_state):
     return False, base, None
 
 
-def locate(base_lo=400, base_hi=580, step=20, R=128.0, z=95, target_cx=240):
+def locate(base_lo=380, base_hi=880, step=25, R=150.0, z=None, target_cx=240):
     """Find the base angle that points the camera at the blue object, by sweeping the front
     arc and picking the base where the blob sits nearest frame-centre. Returns (base, R) or
     None. This replaces the hand-rolled pre-sweep I used to do by hand (which looked like a
@@ -141,7 +141,18 @@ def locate(base_lo=400, base_hi=580, step=20, R=128.0, z=95, target_cx=240):
     LESSON 2026-07-15: don't pre-abort on apparent orientation. A 3:1 bar that looked
     'elongated across the jaws' in the oblique look-view still grabbed and HELD (0.1px) —
     the shallow look-view foreshortens radially and exaggerates tangential length. The
-    held-test is the only arbiter; let the grab run and judge by that."""
+    held-test is the only arbiter; let the grab run and judge by that.
+
+    Range/height widened and re-derived 2026-07-19 after the arm was remounted on the car
+    chassis: the old base_lo/hi=400-580 assumed a narrow forward arc and silently missed a
+    real object sitting at base~700-800 (to the side); z=95 was a fixed height from before
+    the remount and didn't match this session's re-measured floor (rig.GRASP_Z=-65) - z now
+    defaults to rig.GRASP_Z+60 (the same HIGH convention grab2/tanggrab use) so it stays
+    correct if GRASP_Z is re-measured again. A single coarse pass at one R is enough (the
+    blob's pixel position moves smoothly and monotonically with base) - don't grid-search
+    R too, that's needlessly slow for what a smooth 1D sweep already finds in one pass."""
+    if z is None:
+        z = rig.GRASP_Z + 60.0
     best = None  # (abs_err, base, cx)
     for base in range(base_lo, base_hi + 1, step):
         if not look(base, R, z, 1000):
@@ -169,7 +180,7 @@ def main():
                          "(not needed for --start locate)")
     ap.add_argument("--gz", type=float, default=-35.0, help="initial closing height")
     ap.add_argument("--gzmin", type=float, default=-50.0, help="lowest allowed closing z")
-    ap.add_argument("--outdir", default="/home/astra/tools/orbit_out")
+    ap.add_argument("--outdir", default="/home/astra/robotics/orbit_out")
     args = ap.parse_args()
 
     rig.GRASP_Z_floor_min = args.gzmin

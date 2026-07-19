@@ -40,8 +40,8 @@ sys.path.insert(0, "/home/astra/tools")
 import calib   # reuse its marker detector
 import kin
 
-ARM = "/home/astra/tools/arm"
-CALIB_DIR = "/home/astra/tools/calib"
+ARM = "/home/astra/robotics/arm"
+CALIB_DIR = "/home/astra/robotics/calib"
 POINTS_JSON = f"{CALIB_DIR}/points3d.json"
 MODEL_JSON = f"{CALIB_DIR}/camera3d.json"
 

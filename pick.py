@@ -32,7 +32,7 @@ sys.path.insert(0, "/home/astra/tools")
 import calib
 import kin
 
-ARM = "/home/astra/tools/arm"
+ARM = "/home/astra/robotics/arm"
 SNAPSHOT_URL = "http://127.0.0.1:8090/?action=snapshot"
 
 OPEN, CLAMP = 156, 640          # gripper: clamp toward fully-closed so it grips with
@@ -107,7 +107,7 @@ def in_zone(px, py):
 
 
 def arm_step(moves, ms=1200):
-    subprocess.run([ARM, "step", moves, "/home/astra/tools/calib/_tmp.jpg", str(ms)],
+    subprocess.run([ARM, "step", moves, "/home/astra/robotics/calib/_tmp.jpg", str(ms)],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
 
@@ -218,7 +218,7 @@ def pick(dry_run=False, grasp_z=None):
     if claw:
         cv2.drawMarker(img, (int(claw[0]), int(claw[1])), (0, 0, 255), cv2.MARKER_CROSS, 18, 2)
     cv2.drawMarker(img, (int(px[0]), int(px[1])), (255, 0, 255), cv2.MARKER_TILTED_CROSS, 18, 2)
-    cv2.imwrite("/home/astra/tools/calib/pre_grasp.jpg", img)
+    cv2.imwrite("/home/astra/robotics/calib/pre_grasp.jpg", img)
     print("  снимок перед захватом -> calib/pre_grasp.jpg")
 
     arm_step(f"1:{CLAMP}", 900)

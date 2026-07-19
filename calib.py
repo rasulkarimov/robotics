@@ -36,9 +36,9 @@ import numpy as np
 sys.path.insert(0, "/home/astra/tools")
 import kin
 
-ARM = "/home/astra/tools/arm"
+ARM = "/home/astra/robotics/arm"
 SNAPSHOT_URL = "http://127.0.0.1:8090/?action=snapshot"
-CALIB_DIR = "/home/astra/tools/calib"
+CALIB_DIR = "/home/astra/robotics/calib"
 POINTS_JSON = f"{CALIB_DIR}/points.json"
 HOMOGRAPHY_JSON = f"{CALIB_DIR}/homography.json"
 

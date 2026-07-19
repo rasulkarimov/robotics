@@ -100,7 +100,7 @@ def main(argv=None):
     ap.add_argument("--correct-mm", type=float, default=CORRECT_MM)
     ap.add_argument("--update-world", action="store_true",
                     help="advance the nav world pose by mm and set heading to the residual drift")
-    ap.add_argument("--outdir", default="/home/astra/tools/nav_state")
+    ap.add_argument("--outdir", default="/home/astra/robotics/nav_state")
     args = ap.parse_args(argv)
 
     # Lazy: dxyaw pulls in cv2, car talks to the server. Neither is needed to import

@@ -37,7 +37,7 @@ import calib3d        # 3D camera model
 import kin
 import pick           # object detector
 
-ARM = "/home/astra/tools/arm"
+ARM = "/home/astra/robotics/arm"
 OPEN, CLAMP = 156, 640
 FLOOR_Z = calib3d.FLOOR_Z          # the floor, in command coordinates
 GRASP_H = 12.0                     # how far above the floor the jaws should close
@@ -205,7 +205,7 @@ def pick_object(iters=4, tol_px=3.0):
                    cv2.MARKER_CROSS, 18, 2)
     cv2.drawMarker(img, (int(px[0]), int(px[1])), (255, 0, 255),
                    cv2.MARKER_TILTED_CROSS, 18, 2)
-    cv2.imwrite("/home/astra/tools/calib/pre_grasp3d.jpg", img)
+    cv2.imwrite("/home/astra/robotics/calib/pre_grasp3d.jpg", img)
 
     calib3d.arm_step(f"1:{CLAMP}", 900)
     print(f"  клешня сомкнута: {gripper()}  (число НЕ доказывает захват — проверяем глазами)")
