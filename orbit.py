@@ -170,6 +170,37 @@ def locate(base_lo=380, base_hi=880, step=25, R=150.0, z=None, target_cx=240):
     return (best[1], R)
 
 
+def locate_near(hint_base, hint_R, z=None, log=print):
+    """Find the object starting from an APPROXIMATE known position - e.g. where we just
+    placed it, or where the user said it roughly is. Tries the hint pose first, then
+    expanding rings of nearby base angles (+/-40, 80, 160, 320), at the hinted R plus two
+    standard fallback radii. Returns (base, R, pixel) or None.
+
+    Measured 2026-07-19 over a 10-rep varied-position drill: when the hint came from our
+    own last placement, this found the object at the FIRST pose every single time - vs the
+    ~20 poses a blind full-arc locate() sweep costs. Use locate() only when there is no
+    idea at all where the object is."""
+    import grab2
+    if z is None:
+        z = rig.GRASP_Z + 60.0
+    fallback_Rs = [r for r in (150.0, 190.0) if abs(r - hint_R) > 1]
+    tried = 0
+    for radius in (0, 40, 80, 160, 320):
+        bases = [hint_base] if radius == 0 else [hint_base - radius, hint_base + radius]
+        for b in bases:
+            b = max(150, min(850, b))
+            for R in [hint_R] + fallback_Rs:
+                if grab2.pose(b, R, z, 400) is None:
+                    continue
+                tried += 1
+                p = pe.see()
+                if p is not None:
+                    log(f"    [locate_near] found at base={b} R={R:.0f} after {tried} poses")
+                    return b, R, p
+    log(f"    [locate_near] not found after {tried} poses (hint {hint_base}:{hint_R:.0f})")
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--start", required=True,

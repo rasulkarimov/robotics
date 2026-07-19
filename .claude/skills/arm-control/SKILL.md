@@ -64,15 +64,22 @@ false-positive on any other blue thing in frame (a blanket, someone's blue sleev
 If a "found" pixel corresponds to a big blob near a frame corner rather than a
 small blob near the floor, be suspicious before committing to a grasp there.
 
-### Finding the object: one coarse sweep is enough
+### Finding the object: use the hint first, sweep only blind
 
-The blob's pixel position moves smoothly and monotonically with the base (neck)
-servo angle. A single-axis sweep at one fixed R (e.g. `orbit.locate()`) is enough -
-don't grid-search R x base, that's needlessly slow (learned the hard way running an
-80-position grid when a single ~20-position sweep would have found it just as
-well). If not found, widen the base range before adding a second R value - a real
-object can sit well outside a narrow assumed forward arc (had one at base~780 when
-the code's default range was 400-580).
+If there is ANY approximate idea where the object is (we just placed it there, the
+user pointed, it was seen a moment ago) - use `orbit.locate_near(hint_base, hint_R)`:
+it tries the hint pose first, then expanding rings around it. Over a 10-rep drill
+where the hint came from our own last placement it found the object at the FIRST
+pose every time, vs ~20 poses for a blind sweep.
+
+Only when there's no idea at all, fall back to `orbit.locate()` (single-axis sweep
+of base at one fixed R). The blob's pixel position moves smoothly and monotonically
+with the base servo angle, so one coarse 1D pass is enough - don't grid-search
+R x base, that's needlessly slow (learned the hard way running an 80-position grid
+when a single ~20-position sweep would have found it just as well). If not found,
+widen the base range before adding a second R value - a real object can sit well
+outside a narrow assumed forward arc (had one at base~780 when the code's default
+range was 400-580).
 
 ### GRASP_Z is not a constant - re-measure it
 
@@ -116,3 +123,11 @@ rigid to the camera and barely moves (a few px); an object still on the floor
 slides a lot (50-200+ px) because its apparent position changes with viewing angle
 (parallax). A small single-step lift-shift check can look fine even on a genuine
 miss - the base-rotation wiggle is what actually catches it.
+
+Failure statistics from a 15-rep drill (varied angles and distances, 2026-07-19):
+14/15 held. The one miss came from a garbage orientation measurement (a blob
+clipped at the frame edge measured long_ang=0 -> near-servo-limit wrist rotation ->
+jaws closed beside the bar). The wiggle test caught it correctly, and an immediate
+retry from the same position succeeded. So: on a failed wiggle test, don't
+diagnose - just open the jaws and retry the whole locate->aim->grasp once from the
+same hint; only escalate to a human after a second consecutive miss.
