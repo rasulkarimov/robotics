@@ -226,6 +226,85 @@ def tanggrab(base, R, gz, outdir):
     return {"held": held, "shift": shift, "base": base, "R": R, "x": x, "y": y, "rot": rot}
 
 
+def wiggle_held_test(log=print):
+    """The honest grasp check: swing the base a real amount and see if the object's pixel
+    moves. A held object is rigid to the wrist camera (a few px); one still on the floor
+    slides 50-300px from parallax. Returns (held, shift1, shift2). Trust THIS, never the
+    gripper servo reading (proven to overlap between hit and miss)."""
+    b0 = orbit.get_servo(6)
+    p1 = pe.see()
+    pe.arm_step(f"6:{b0 + 40}", 700); time.sleep(0.3)
+    p2 = pe.see()
+    pe.arm_step(f"6:{b0 - 20}", 700); time.sleep(0.3)
+    p3 = pe.see()
+    s1 = math.dist(p1, p2) if (p1 and p2) else None
+    s2 = math.dist(p2, p3) if (p2 and p3) else None
+    held = s1 is not None and s1 < 15 and s2 is not None and s2 < 15
+    log(f"    [wiggle] shifts=({s1}, {s2}) -> {'HELD' if held else 'NOT held'}")
+    return held, s1, s2
+
+
+def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
+    """The canonical end-to-end bar grasp, as proven in the 2026-07-19 drills (19/20 held
+    across angles 57-158deg and reaches 130-190mm when counting the auto-retry):
+
+    locate_near(hint) -> center_grabframe -> measure orientation -> rotated fine-aim ->
+    rotate wrist in the air -> descend STRAIGHT DOWN (no pull-in, see note in tanggrab())
+    -> clamp -> lift -> wiggle_held_test -> on failure, retry once from the same hint
+    (the observed failure mode is a garbage one-off orientation measurement, not anything
+    persistent - a plain retry fixed it in the drill).
+
+    Returns the result dict (held/base/R/x/y/rot) or None if not found/unreachable.
+    Leaves the bar HELD and lifted on success; escalate to a human after this returns
+    a not-held result (i.e. after the built-in retry already failed)."""
+    if gz is not None:
+        rig.GRASP_Z = gz
+    HIGH = rig.GRASP_Z + 60.0
+    for attempt in range(1 + retries):
+        if attempt:
+            log(f"    [grasp_bar] retry {attempt}/{retries} from the same hint")
+        pe.arm_step(f"2:{NEUTRAL}", 500)
+        pe.arm_step(f"1:{pe.OPEN}", 700)
+        loc = orbit.locate_near(hint_base, hint_R, log=log)
+        if loc is None:
+            continue
+        hit = center_grabframe(loc[0], loc[1], HIGH)
+        if hit is None:
+            continue
+        base, R, _ = hit
+        m = None
+        for _ in range(6):
+            m = measure(pick.frame())
+            if m:
+                break
+            time.sleep(0.2)
+        if m is None:
+            continue
+        _, _, aspect, long_ang = m
+        rot, aim_dx, aim_dy = wrist_for_bar(long_ang, aspect)
+        a = kin.s2a(base, 6); x, y = R * math.cos(a), R * math.sin(a)
+        base_gp = rig.GRASP_PIXEL
+        if rot != NEUTRAL:
+            rig.GRASP_PIXEL = (base_gp[0] + aim_dx, base_gp[1] + aim_dy)
+        r = pe.servo(x, y, HIGH, iters=8, tol_px=18.0, label="aim")
+        rig.GRASP_PIXEL = base_gp
+        if r:
+            x, y = r
+        if rot != NEUTRAL:
+            pe.arm_step(f"2:{rot}", 900); time.sleep(0.4)
+        if not pe.goto(x, y, rig.GRASP_Z, 1400):
+            log("    [grasp_bar] descend unreachable")
+            continue
+        pe.arm_step(f"1:{pe.CLAMP}", 900); time.sleep(0.3)
+        pe.goto(x, y, rig.GRASP_Z + 90, 1500)
+        held, s1, s2 = wiggle_held_test(log=log)
+        if held:
+            return {"held": True, "shifts": (s1, s2), "long_ang": long_ang,
+                    "base": base, "R": R, "x": x, "y": y, "rot": rot,
+                    "attempts": attempt + 1}
+    return {"held": False, "attempts": 1 + retries}
+
+
 def place(x, y, gz):
     """Set the object down at (x,y), then reset the wrist to neutral. Pass a FIXED inner spot
     (not the grabbed pose) to stop the object walking outward over repeated grabs. KEY: the

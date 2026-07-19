@@ -50,6 +50,25 @@ If `arm.py` fails with `OSError: open failed` in `xarm.Controller("USB", ...)`:
 
 ## Vision-guided pick-and-place
 
+**Canonical entry point: `tanggrab.grasp_bar(hint_base, hint_R)`** - the full proven
+sequence (hint-based locate -> centre -> measure orientation -> rotated aim -> rotate
+wrist -> straight descent -> clamp -> wiggle-verify -> auto-retry once). 19/20 held
+across the 2026-07-19/20 drills, including reach extremes (140-195mm), base extremes
+(390-660), a deliberately wrong hint (+120 units - the ring search recovered in 2
+poses), and varied bar angles. Placement via `tanggrab.place()` is accurate enough
+that `locate_near` re-found the bar at exactly the commanded spot 5/5 times - so
+after placing, the placement coordinates ARE a reliable hint for the next grasp.
+
+Physical constraints learned live:
+- Keep reach R >= ~140mm: closer to the chassis the jaws/wrist snag on the
+  chassis-mounted ultrasonic bracket (user warning after watching a near-catch).
+- Pause ~1s between arm motion phases in long drills. Two spontaneous Pi reboots
+  happened mid-drill during rapid back-to-back multi-servo sequences (single moves
+  never triggered it, and Pi undervoltage flags stay clean on single moves);
+  with 1.2s inter-phase pauses a full 5-rep drill ran clean. Suspected shared-supply
+  current spikes - treat dense motion bursts as a power hazard until the supply is
+  separated.
+
 Pipeline, roughly in order of sophistication: `pick.py` (older, homography-based,
 one fixed calibrated zone) -> `pick3d.py` (full 3D camera model) -> `pick_eye.py`
 (current: eye-in-hand, camera+jaws are one rigid body, so the claw sits at a FIXED
