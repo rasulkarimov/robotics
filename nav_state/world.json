@@ -390,6 +390,62 @@
         }
       ],
       "t": "2026-07-19 17:07:24"
+    },
+    {
+      "id": 8,
+      "pose": {
+        "x_mm": 95.80124443115041,
+        "y_mm": 107.90097005079767,
+        "theta_deg": -46.0
+      },
+      "observations": [
+        {
+          "neck_deg": -80.0,
+          "world_bearing_deg": -126.0,
+          "image": "kf8_n-80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:16:27",
+          "orb_keypoints": 34,
+          "descriptors_file": "kf8_n-80.jpg.orb.npy"
+        },
+        {
+          "neck_deg": -40.0,
+          "world_bearing_deg": -86.0,
+          "image": "kf8_n-40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:16:29",
+          "orb_keypoints": 71,
+          "descriptors_file": "kf8_n-40.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 0.0,
+          "world_bearing_deg": -46.0,
+          "image": "kf8_n+00.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:16:30",
+          "orb_keypoints": 205,
+          "descriptors_file": "kf8_n+00.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 40.0,
+          "world_bearing_deg": -6.0,
+          "image": "kf8_n+40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:16:32",
+          "orb_keypoints": 246,
+          "descriptors_file": "kf8_n+40.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 80.0,
+          "world_bearing_deg": 34.0,
+          "image": "kf8_n+80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:16:33",
+          "orb_keypoints": 274,
+          "descriptors_file": "kf8_n+80.jpg.orb.npy"
+        }
+      ],
+      "t": "2026-07-19 17:16:35"
     }
   ],
   "landmarks": [],
@@ -485,6 +541,19 @@
         "sigma_theta_deg": 4.0,
         "kind": "odometry",
         "t": "2026-07-19 17:07:24"
+      },
+      {
+        "i": 7,
+        "j": 8,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-07-19 17:16:35"
       }
     ],
     "last_optimize": null

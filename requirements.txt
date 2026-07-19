@@ -3,3 +3,6 @@
 # See arm.py module docstring for why this lives in a venv (system pip is PEP 668 blocked).
 hidapi==0.15.0
 xarm==0.0.4
+numpy==2.5.1
+opencv-python-headless==5.0.0.93
+Pillow==12.3.0
