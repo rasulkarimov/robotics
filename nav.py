@@ -74,10 +74,14 @@ def _arm(*args, timeout=30):
 
 # --- Lookout ("periscope") pose --------------------------------------------
 # Raises the wrist camera off the floor so a scan sees the ROOM (walls, doors,
-# furniture) instead of just floor tiles. Found empirically 2026-07-17 by
-# snapshot feedback; servo ids are arm.py's numbering (3=shoulder, 4=elbow,
-# 5=wrist_pitch). Tune here if the mount or arm base moves.
-LOOKOUT_POSE = {"3": 500, "4": 848, "5": 514}
+# furniture) instead of just floor tiles. Servo ids are arm.py's numbering
+# (3=shoulder, 4=elbow, 5=wrist_pitch). Tune here if the mount or arm base moves.
+#
+# Updated 2026-07-19 (was {"3": 500, "4": 848, "5": 514}, found empirically
+# 2026-07-17): user identified arm.py's HOME_POSE as a mechanically more stable
+# pose for scanning, so shoulder/elbow/wrist_pitch here now match HOME_POSE's
+# joints 3/4/5 instead of the old one-off periscope pose.
+LOOKOUT_POSE = {"3": 237, "4": 843, "5": 682}
 
 
 def raise_to_lookout():
@@ -299,8 +303,10 @@ def cmd_scan(args):
         obs.append(ob)
         print(f"  neck {a:+.0f} -> bearing {bearing:+.0f} : {fname} "
               f"({size} B, {ob.get('orb_keypoints')} ORB kp)")
-    # recentre the neck
-    _arm("move", NECK_SERVO, _neck_pos(0), 700)
+    # return to HOME_POSE (not just recentre the neck to 500) - user-designated
+    # rest pose, requested 2026-07-19 so a scan never leaves the arm parked
+    # off-home.
+    _arm("home")
     w["keyframes"].append({"id": kf_id, "pose": pose, "observations": obs,
                            "t": _now()})
     if kf_id > 0:                       # link to the previous keyframe by odometry

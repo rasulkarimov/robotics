@@ -237,6 +237,159 @@
         }
       ],
       "t": "2026-07-19 17:00:31"
+    },
+    {
+      "id": 5,
+      "pose": {
+        "x_mm": 95.80124443115041,
+        "y_mm": 107.90097005079767,
+        "theta_deg": -46.0
+      },
+      "observations": [
+        {
+          "neck_deg": -80.0,
+          "world_bearing_deg": -126.0,
+          "image": "kf5_n-80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:03:20",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": -40.0,
+          "world_bearing_deg": -86.0,
+          "image": "kf5_n-40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:03:21",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 0.0,
+          "world_bearing_deg": -46.0,
+          "image": "kf5_n+00.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:03:23",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 40.0,
+          "world_bearing_deg": -6.0,
+          "image": "kf5_n+40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:03:24",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 80.0,
+          "world_bearing_deg": 34.0,
+          "image": "kf5_n+80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:03:26",
+          "orb_keypoints": null
+        }
+      ],
+      "t": "2026-07-19 17:03:27"
+    },
+    {
+      "id": 6,
+      "pose": {
+        "x_mm": 95.80124443115041,
+        "y_mm": 107.90097005079767,
+        "theta_deg": -46.0
+      },
+      "observations": [
+        {
+          "neck_deg": -80.0,
+          "world_bearing_deg": -126.0,
+          "image": "kf6_n-80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:05:16",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": -40.0,
+          "world_bearing_deg": -86.0,
+          "image": "kf6_n-40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:05:18",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 0.0,
+          "world_bearing_deg": -46.0,
+          "image": "kf6_n+00.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:05:19",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 40.0,
+          "world_bearing_deg": -6.0,
+          "image": "kf6_n+40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:05:21",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 80.0,
+          "world_bearing_deg": 34.0,
+          "image": "kf6_n+80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:05:22",
+          "orb_keypoints": null
+        }
+      ],
+      "t": "2026-07-19 17:05:23"
+    },
+    {
+      "id": 7,
+      "pose": {
+        "x_mm": 95.80124443115041,
+        "y_mm": 107.90097005079767,
+        "theta_deg": -46.0
+      },
+      "observations": [
+        {
+          "neck_deg": -80.0,
+          "world_bearing_deg": -126.0,
+          "image": "kf7_n-80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:07:16",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": -40.0,
+          "world_bearing_deg": -86.0,
+          "image": "kf7_n-40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:07:18",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 0.0,
+          "world_bearing_deg": -46.0,
+          "image": "kf7_n+00.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:07:19",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 40.0,
+          "world_bearing_deg": -6.0,
+          "image": "kf7_n+40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:07:21",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 80.0,
+          "world_bearing_deg": 34.0,
+          "image": "kf7_n+80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:07:22",
+          "orb_keypoints": null
+        }
+      ],
+      "t": "2026-07-19 17:07:24"
     }
   ],
   "landmarks": [],
@@ -293,6 +446,45 @@
         "sigma_theta_deg": 4.0,
         "kind": "odometry",
         "t": "2026-07-19 17:00:31"
+      },
+      {
+        "i": 4,
+        "j": 5,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-07-19 17:03:27"
+      },
+      {
+        "i": 5,
+        "j": 6,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-07-19 17:05:23"
+      },
+      {
+        "i": 6,
+        "j": 7,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-07-19 17:07:24"
       }
     ],
     "last_optimize": null
