@@ -346,13 +346,25 @@ def find_camera_device():
     """Freenove's Start_mjpg_Streamer.sh hardcodes /dev/video0, but the USB camera does
     NOT reliably come back as video0 - unplug it and it can re-enumerate as video1 or
     video2, at which point the stream silently refuses to start. Probe for the device
-    that can actually capture instead of trusting the number."""
-    out = subprocess.run(["v4l2-ctl", "--list-devices"], capture_output=True, text=True).stdout
+    that can actually capture instead of trusting the number.
+
+    Bug fixed 2026-07-19: used to check `"uvcvideo" in <aggregate --list-devices output>`,
+    but on this system that command prints the human-readable card name ("HD video"), never
+    the literal string "uvcvideo" - so the condition was always false and this always fell
+    through to the /dev/video0 hardcoded fallback, silently defeating the whole probe. Now
+    checks each candidate device's own driver name via `-D`, which does reliably say
+    "uvcvideo" for the real camera and something else (e.g. "bcm2835-codec") for the Pi's
+    on-SoC codec/ISP video nodes - several of which also advertise YUYV/MJPG formats and
+    would otherwise false-positive-match on the format check alone."""
     for dev in sorted(glob.glob("/dev/video*"),
                       key=lambda d: int("".join(c for c in d if c.isdigit()) or 0)):
+        info = subprocess.run(["v4l2-ctl", "-d", dev, "-D"],
+                              capture_output=True, text=True).stdout
+        if "uvcvideo" not in info:
+            continue
         probe = subprocess.run(["v4l2-ctl", "-d", dev, "--list-formats-ext"],
                                capture_output=True, text=True).stdout
-        if "uvcvideo" in out and ("YUYV" in probe or "MJPG" in probe):
+        if "YUYV" in probe or "MJPG" in probe:
             return dev
     return "/dev/video0"
 

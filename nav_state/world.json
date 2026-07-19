@@ -166,6 +166,77 @@
         }
       ],
       "t": "2026-07-18 03:06:30"
+    },
+    {
+      "id": 2,
+      "pose": {
+        "x_mm": 95.80124443115041,
+        "y_mm": 107.90097005079767,
+        "theta_deg": -46.0
+      },
+      "observations": [],
+      "t": "2026-07-19 16:57:02"
+    },
+    {
+      "id": 3,
+      "pose": {
+        "x_mm": 95.80124443115041,
+        "y_mm": 107.90097005079767,
+        "theta_deg": -46.0
+      },
+      "observations": [],
+      "t": "2026-07-19 16:58:09"
+    },
+    {
+      "id": 4,
+      "pose": {
+        "x_mm": 95.80124443115041,
+        "y_mm": 107.90097005079767,
+        "theta_deg": -46.0
+      },
+      "observations": [
+        {
+          "neck_deg": -80.0,
+          "world_bearing_deg": -126.0,
+          "image": "kf4_n-80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:00:24",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": -40.0,
+          "world_bearing_deg": -86.0,
+          "image": "kf4_n-40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:00:25",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 0.0,
+          "world_bearing_deg": -46.0,
+          "image": "kf4_n+00.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:00:27",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 40.0,
+          "world_bearing_deg": -6.0,
+          "image": "kf4_n+40.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:00:28",
+          "orb_keypoints": null
+        },
+        {
+          "neck_deg": 80.0,
+          "world_bearing_deg": 34.0,
+          "image": "kf4_n+80.jpg",
+          "range_mm": null,
+          "t": "2026-07-19 17:00:30",
+          "orb_keypoints": null
+        }
+      ],
+      "t": "2026-07-19 17:00:31"
     }
   ],
   "landmarks": [],
@@ -183,6 +254,45 @@
         "sigma_theta_deg": 4.0,
         "kind": "odometry",
         "t": "2026-07-18 03:06:30"
+      },
+      {
+        "i": 1,
+        "j": 2,
+        "z": [
+          -150.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-07-19 16:57:02"
+      },
+      {
+        "i": 2,
+        "j": 3,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-07-19 16:58:09"
+      },
+      {
+        "i": 3,
+        "j": 4,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-07-19 17:00:31"
       }
     ],
     "last_optimize": null

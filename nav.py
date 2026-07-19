@@ -50,7 +50,7 @@ STATE_DIR = os.environ.get("NAV_STATE_DIR", os.path.join(HERE, "nav_state"))
 FRAMES_DIR = os.path.join(STATE_DIR, "frames")
 WORLD = os.path.join(STATE_DIR, "world.json")
 
-VENV_PY = os.path.join(HERE, "venv", "bin", "python3")
+VENV_PY = "/home/astra/tools/venv/bin/python3"
 ARM_PY = os.path.join(HERE, "arm.py")
 
 # --- Neck (arm servo 6) geometry -------------------------------------------
