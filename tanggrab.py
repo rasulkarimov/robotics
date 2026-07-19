@@ -352,10 +352,11 @@ def drill(base, drill_spot, gz0, reps, outdir):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="auto", help="object base angle, or 'auto' to locate")
-    ap.add_argument("--gz", type=float, default=-30.0,
-                    help="grasp close height. -30 (was -35): user 2026-07-16 saw the jaws catch "
-                         "the floor closing at -35, asked for +4-5mm. Adaptive drop still kicks "
-                         "in 6mm at a time if a grab closes on air.")
+    ap.add_argument("--gz", type=float, default=None,
+                    help="grasp close height; default = rig.GRASP_Z (the calibrated floor). "
+                         "Earlier hardcoded defaults (-35, then -30) went stale every time "
+                         "the floor was re-measured - deriving from rig keeps one source of "
+                         "truth. Adaptive drop still kicks in 6mm at a time on an air-close.")
     ap.add_argument("--place", action="store_true",
                     help="after the held-test, set the object down at --reset-to")
     ap.add_argument("--reset-to", default="445:128",
@@ -368,6 +369,9 @@ def main():
                     help="base:R fixed spot the reps drill grabs from / places to.")
     ap.add_argument("--outdir", default="/home/astra/robotics/orbit_out")
     args = ap.parse_args()
+
+    if args.gz is None:
+        args.gz = rig.GRASP_Z
 
     if args.base == "auto":
         loc = orbit.locate()

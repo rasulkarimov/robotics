@@ -62,7 +62,11 @@ import urllib.request
 VENV_PY = "/home/astra/tools/venv/bin/python3"
 DEFAULT_SERVO_IDS = [1, 2, 3, 4, 5, 6]
 MIN_DURATION_MS = 500  # floor, to avoid jerky/abrupt moves that strain servos/gears
-RECORDINGS_DIR = "/home/astra/tools/arm_recordings"  # persists across reboots (not /tmp)
+RECORDINGS_DIR = "/home/astra/robotics/arm_recordings"  # in-repo: survives reboots AND is
+                                                        # version-controlled (was
+                                                        # /home/astra/tools/arm_recordings,
+                                                        # outside git - a taught trajectory
+                                                        # would die with the SD card)
 
 # Battery guard. The arm may run off 2x 18650 in series (2S): 8.4 V full, 7.4 V nominal,
 # and below ~3.0 V/cell under load lithium starts to degrade - under 2.5 V/cell it is

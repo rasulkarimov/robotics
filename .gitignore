@@ -9,6 +9,11 @@ __pycache__/
 *.jpeg
 *.png
 
+# ...but reference images (e.g. the robot's own photo) are deliberate, keep them
+!docs/*.jpg
+!docs/*.jpeg
+!docs/*.png
+
 # Derived ORB feature dumps
 nav_state/frames/
 

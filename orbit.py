@@ -209,11 +209,20 @@ def main():
     ap.add_argument("--waypoints", default=None,
                     help="comma list base:R of placement targets, one per hop "
                          "(not needed for --start locate)")
-    ap.add_argument("--gz", type=float, default=-35.0, help="initial closing height")
-    ap.add_argument("--gzmin", type=float, default=-50.0, help="lowest allowed closing z")
+    ap.add_argument("--gz", type=float, default=None,
+                    help="initial closing height; default = rig.GRASP_Z (the calibrated "
+                         "floor). A hardcoded default here went stale once already: it sat "
+                         "at -35 while the re-measured GRASP_Z was -65, so every default "
+                         "run closed 30mm above the floor.")
+    ap.add_argument("--gzmin", type=float, default=None,
+                    help="lowest allowed closing z; default = rig.GRASP_Z - rig.GRASP_Z_DRIFT")
     ap.add_argument("--outdir", default="/home/astra/robotics/orbit_out")
     args = ap.parse_args()
 
+    if args.gz is None:
+        args.gz = rig.GRASP_Z
+    if args.gzmin is None:
+        args.gzmin = rig.GRASP_Z - rig.GRASP_Z_DRIFT
     rig.GRASP_Z_floor_min = args.gzmin
     os.makedirs(args.outdir, exist_ok=True)
     parse = lambda s: (int(s.split(":")[0]), float(s.split(":")[1]))

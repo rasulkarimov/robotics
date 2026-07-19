@@ -93,7 +93,10 @@ def _drill(base, drill_spot, gz0, reps, outdir, grab_fn, place_fn, s2a, log=prin
 def main(argv=None):
     ap = argparse.ArgumentParser(description="grasp with an explicit verify-retry loop")
     ap.add_argument("--base", default="auto", help="object base angle, or 'auto' to locate")
-    ap.add_argument("--gz", type=float, default=-30.0, help="initial grasp close height (mm)")
+    ap.add_argument("--gz", type=float, default=None,
+                    help="initial grasp close height (mm); default = rig.GRASP_Z (the "
+                         "calibrated floor - a hardcoded default here goes stale whenever "
+                         "the floor is re-measured)")
     ap.add_argument("--place", action="store_true", help="set the object down after a held grab")
     ap.add_argument("--reset-to", default="445:128", help="base:R to place a single grab at")
     ap.add_argument("--reps", type=int, default=1, help="run a grab+place DRILL this many times")
@@ -108,6 +111,10 @@ def main(argv=None):
     import tanggrab
     import orbit
     import kin
+    import rig
+
+    if args.gz is None:
+        args.gz = rig.GRASP_Z
 
     if args.base == "auto":
         loc = orbit.locate()
