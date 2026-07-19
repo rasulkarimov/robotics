@@ -85,6 +85,26 @@ up and re-descend to the same value to confirm repeatability before trusting it.
 Update `rig.GRASP_Z` (and leave a dated comment noting the old value, so the next
 session can tell real drift from a fresh remount).
 
+### Rotated (tangential-bar) grasps: skip the reach pull-in
+
+`tanggrab.py`'s documented sequence pulls the reach IN after rotating the wrist
+(`PULLIN_PER_DEG * rotation_degrees`), meant to cancel the radial swing of the
+jaws. Verified 2026-07-19 (post chassis-remount): this pull-in consistently
+dragged an already-good aim (6-13px error right after the rotated fine-aim) into
+a bad one (100-200+px error, failed grasp) - confirmed live by the user watching
+("last correction pulled you away from the target"). Skip the pull-in entirely:
+after the rotated fine-aim converges, descend straight down at the SAME (x,y) to
+`rig.GRASP_Z`, no radius reduction. This alone took the rotated-grasp success rate
+from repeated misses to 4/4 held (one supervised + 3 unsupervised reps). The pixel
+position does drift further as it descends while rotated (tracked smoothly from
+~(314,138) at HIGH down to ~(372,233) at GRASP_Z in one test) - that drift is real
+and not fully understood (possibly the pitch-band-constrained IK picking a
+different solution at depth while rotated), but is small enough at this session's
+R/heights that closing on the un-corrected aim still holds; don't try to correct
+for it with a servo pass at floor height either (it reliably loses the object -
+the "clipped/close-up blob" instability tanggrab.py itself warns about applies
+doubly with the jaws rotated across the frame).
+
 ### The only honest success check is a wiggle test
 
 The gripper's own servo reading LIES - a light or compressible object can read

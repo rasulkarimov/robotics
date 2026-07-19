@@ -202,13 +202,16 @@ def tanggrab(base, R, gz, outdir):
     print(f"    [tang] aimed (rot-offset {'on' if rot!=NEUTRAL else 'off'}) "
           f"err={aim_err:.0f}px")
 
-    # 3) rotate wrist IN THE AIR, pull the reach IN to cancel the radial jaw swing, then descend
+    # 3) rotate wrist IN THE AIR, then descend
+    # Pull-in DISABLED 2026-07-19: PULLIN_PER_DEG was calibrated 2026-07-16 at gz=-30, a
+    # different grasp height than this session's re-measured rig.GRASP_Z (see rig.py) - with
+    # the current calibration it consistently dragged an already-good aim (6-13px error)
+    # into a bad one (100-200+px, failed grasp), confirmed live by the user watching. Descend
+    # straight down at the aimed (x,y) instead - verified 4/4 held across a supervised run
+    # plus 3 unsupervised reps. If PULLIN_PER_DEG is ever re-measured for a fresh GRASP_Z,
+    # this can be re-enabled.
     if rot != NEUTRAL:
         pe.arm_step(f"2:{rot}", 900); time.sleep(0.4); snap("tang_rotated_high")
-        pull = PULLIN_PER_DEG * abs((rot - NEUTRAL) / DEG2UNIT)
-        rc = math.hypot(x, y); s = max(0.1, (rc - pull) / rc)
-        x, y = x * s, y * s
-        print(f"    [tang] reach pull-in {pull:.0f}mm -> R {rc - pull:.0f}")
     if not pe.goto(x, y, rig.GRASP_Z, 1400):
         print("    [tang] descend unreachable"); return False
 
