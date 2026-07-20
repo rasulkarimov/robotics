@@ -18,7 +18,8 @@ ORDER MATTERS (each mistake below cost a failed attempt):
      rotating open jaws at the floor sweeps and knocks the bar away.
   4. Descend, CLAMP, lift, held-test (the only honest success check).
 
-Run under system python3 (cv2/numpy); shells out to ./arm for the arm, like orbit.py.
+Run under the VENV python (/home/astra/tools/venv/bin/python3 - cv2/numpy live there,
+NOT in system python); shells out to ./arm for the arm, like orbit.py.
 """
 import sys, os, math, time, argparse
 sys.path.insert(0, "/home/astra/tools")

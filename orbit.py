@@ -13,7 +13,8 @@ running a multi-hop "move it around" by hand meant re-deriving the same things e
   and REMEMBERS the height that worked for the rest of the run.
 
 Reuses grab2.grab / grab2.put (they already handle wide-FOV aiming + timid bottom pass).
-Run under system python3 (cv2/numpy); it shells out to ./arm (sudo+venv) for the arm.
+Run under the VENV python (/home/astra/tools/venv/bin/python3 - cv2/numpy live there,
+NOT in system python); it shells out to ./arm (sudo+venv) for the arm.
 """
 import sys, os, math, time, subprocess, argparse
 sys.path.insert(0, "/home/astra/tools")
