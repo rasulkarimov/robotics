@@ -88,6 +88,14 @@ def send(cmd, timeout=DEFAULT_TIMEOUT, wait_response=False):
 # and nothing more. It will drift with battery charge, floor surface, load and tyre wear,
 # and a short enough pulse may not overcome static friction at all. Treat `drive_mm` as a
 # rough nudge, never as a measurement, and re-check it if precision matters.
+#
+# 2026-07-25 live check (two 3.0s @ speed-55 pulses, ~600mm predicted each): one
+# undershot to ~475mm (measured via ultrasonic before/after), the other overshot
+# enough to drive straight into a sofa that had visible floor clearance beforehand.
+# The error isn't a fixed bias in one direction (not "always +/-X%") - don't try to
+# patch CAL_SPEED/CAL_SECONDS with a single correction factor from one test. Always
+# leave a safety margin and re-check with a snapshot/ultrasonic before any drive
+# that ends near an obstacle, never trust the requested mm alone.
 CAL_SPEED = 55
 CAL_SECONDS = 0.5
 CAL_MM = 100.0

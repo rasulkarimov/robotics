@@ -53,7 +53,18 @@ WORLD = os.path.join(STATE_DIR, "world.json")
 VENV_PY = "/home/astra/tools/venv/bin/python3"
 ARM_PY = os.path.join(HERE, "arm.py")
 
-CAMERA_FOV_DEG = 60.0   # assumed horizontal FOV - NO calibration; tune if known
+# Horizontal FOV, MEASURED 2026-07-25 (was an uncalibrated 60.0 guess before that).
+# Method: user placed a 7cm object and a tape measure on the floor in view and gave
+# the camera height (36.7cm) and the object distance (~50cm ahead of the front
+# wheels). Scale at that distance came out 15.7 px/cm from the object's pixel width
+# and 17.6 px/cm from an FFT of the tape's 1cm tick spacing - two independent
+# measurements agreeing to ~10%. That gives fx ~= 900-1170px depending on the exact
+# camera-to-object distance (+/-10cm uncertainty), i.e. hFOV ~= 31-39deg.
+# Sanity check that convinced me: only ~39cm is visible across the frame at that
+# range, which is why a 59.3cm floor tile never fits across a snapshot.
+# CONSEQUENCE: the old 60deg guess made fx ~1.8x too small, so every ORB-derived
+# rotation (_yaw_from_frames, kturn.py, dxyaw.py) was OVERSTATED by ~1.8x.
+CAMERA_FOV_DEG = 35.0
 
 # --- Neck (arm servo 6) geometry -------------------------------------------
 # arm.py: servo units 0..1000 map linearly to -125..+125 deg, 500 = 0 deg.

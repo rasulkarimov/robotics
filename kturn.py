@@ -11,7 +11,8 @@ import car
 import cv2
 import numpy as np
 
-FOV = 60.0
+FOV = 35.0   # measured 2026-07-25, was an uncalibrated 60.0 guess - see nav.py's
+             # CAMERA_FOV_DEG comment for the method and why 60 overstated yaw ~1.8x
 
 
 def yaw(fa, fb, band=90):

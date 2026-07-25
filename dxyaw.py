@@ -11,7 +11,8 @@ import sys, math
 import cv2
 import numpy as np
 
-FOV_DEG = 60.0
+FOV_DEG = 35.0   # measured 2026-07-25 (was an uncalibrated 60.0) - see nav.py's
+                 # CAMERA_FOV_DEG comment; 60 overstated every yaw by ~1.8x
 
 
 def analyze(fa, fb, band=70):
