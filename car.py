@@ -380,9 +380,14 @@ def restart_camera():
         time.sleep(1)
     dev = find_camera_device()
     mjpg = "/home/astra/Freenove_Three-wheeled_Smart_Car_Kit_for_Raspberry_Pi/mjpg-streamer"
+    # -y (YUYV) + 320x240 is NOT a combination this camera actually supports (confirmed via
+    # `v4l2-ctl --list-formats-ext`: 320x240 only exists under MJPG, not YUYV) - input_uvc.so
+    # fails with "Failed to set UVC commit control : -75" / "Unable to start capture:
+    # Input/output error" and exits immediately. Default MJPEG @ 640x480 is a confirmed-working
+    # combination (tested live 2026-07-25); dropped -y and bumped -r accordingly.
     subprocess.Popen(
         ["sudo", "./mjpg_streamer",
-         "-i", f"./input_uvc.so -y -d {dev} -n -r 320x240 -f 30",
+         "-i", f"./input_uvc.so -d {dev} -n -r 640x480 -f 30",
          "-o", "./output_http.so -p 8090 -w ./www"],
         cwd=mjpg, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         start_new_session=True)
