@@ -418,6 +418,55 @@ def restart_server():
     print("server (Main.py) restarted headless (QT_QPA_PLATFORM=offscreen)")
 
 
+ARM_PY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "arm.py")
+VENV_PY = "/home/astra/tools/venv/bin/python3"
+
+
+def stop_camera():
+    """Kill mjpg-streamer without touching Main.py, so the command port stays up."""
+    pids = subprocess.run(["pgrep", "mjpg_streamer"],
+                          capture_output=True, text=True).stdout.split()
+    if not pids:
+        print("camera (mjpg-streamer): already stopped")
+        return
+    subprocess.run(["sudo", "kill", "-9", *pids])
+    time.sleep(0.5)
+    print("camera (mjpg-streamer): stopped")
+
+
+def power_save():
+    """Idle mode: cut arm torque and stop the camera, leave Main.py running.
+
+    There is ONE battery for the whole robot (2S3P 18650: Pi, camera, motors and
+    arm all share it - see AGENTS.md), so idle draw is not just the arm's. The two
+    things worth switching off between tasks are the servos holding a pose and
+    mjpg-streamer, which captures and encodes at 30fps continuously plus keeps the
+    USB camera powered.
+
+    Main.py is deliberately LEFT RUNNING (user's call 2026-07-25): it sits at ~0.0%
+    CPU when idle, so it saves nothing worth having, and keeping it up means the
+    command port stays live - the robot remains drivable and `wake` is instant
+    instead of waiting ~5s for a server restart.
+
+    Does NOT release the arm if it is holding something - torque off would drop it.
+    """
+    r = subprocess.run(["sudo", VENV_PY, ARM_PY, "release"],
+                       capture_output=True, text=True)
+    print(f"arm: {r.stdout.strip() or r.stderr.strip()}")
+    stop_camera()
+    r = subprocess.run(["sudo", VENV_PY, ARM_PY, "battery"],
+                       capture_output=True, text=True)
+    if r.stdout.strip():
+        print(f"battery: {r.stdout.strip()}  (whole-system gauge - one shared pack)")
+    print("server (Main.py): left running - command port stays available")
+
+
+def wake():
+    """Come back from power_save: relaunch the camera (server was never stopped)."""
+    restart_camera()
+    status()
+
+
 def status():
     ok = True
     try:
@@ -501,6 +550,10 @@ def main():
     sub.add_parser("status")
     sub.add_parser("restart-camera", help="restart just the hung mjpg-streamer (port 8090)")
     sub.add_parser("restart-server", help="full restart of Main.py (command port + camera)")
+    sub.add_parser("stop-camera", help="stop mjpg-streamer only (leaves Main.py up)")
+    sub.add_parser("sleep", help="power-save idle mode: arm torque off + camera off, "
+                                 "server left running")
+    sub.add_parser("wake", help="undo sleep: relaunch the camera")
 
     args = p.parse_args()
 
@@ -539,6 +592,12 @@ def main():
     elif args.cmd == "restart-server":
         restart_server()
         status()
+    elif args.cmd == "stop-camera":
+        stop_camera()
+    elif args.cmd == "sleep":
+        power_save()
+    elif args.cmd == "wake":
+        wake()
 
 
 if __name__ == "__main__":
