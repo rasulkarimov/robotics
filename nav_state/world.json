@@ -1,39 +1,67 @@
 {
-  "created": "2026-07-18 03:01:43",
+  "created": "2026-07-25 21:01:53",
   "frame": "x=forward-at-start(mm), y=left(mm), theta=deg CCW",
   "pose": {
-    "x_mm": 95.80124443115041,
-    "y_mm": 107.90097005079767,
-    "theta_deg": -46.0
+    "x_mm": 250.0,
+    "y_mm": 0.0,
+    "theta_deg": 11.062004466277841
   },
   "trajectory": [
     {
       "x_mm": 0.0,
       "y_mm": 0.0,
       "theta_deg": 0.0,
-      "t": "2026-07-18 03:01:43",
+      "t": "2026-07-25 21:01:53",
       "note": "init"
     },
     {
-      "x_mm": 200.0,
+      "x_mm": 250.0,
       "y_mm": 0.0,
       "theta_deg": 0.0,
-      "t": "2026-07-18 03:03:32",
-      "note": "forward 200mm"
+      "t": "2026-07-25 21:02:40",
+      "note": "forward 250mm"
     },
     {
-      "x_mm": 200.0,
+      "x_mm": 250.0,
       "y_mm": 0.0,
-      "theta_deg": -46.0,
-      "t": "2026-07-18 03:06:17",
-      "note": "set-heading -46.0"
+      "theta_deg": -3.2562862885849597,
+      "t": "2026-07-25 21:12:00",
+      "note": "turn left ang=45 dur=0.8s -> dyaw=-3.3deg (matches 2, centre 0, LOW CONFIDENCE)"
     },
     {
-      "x_mm": 95.8,
-      "y_mm": 107.9,
-      "theta_deg": -46.0,
-      "t": "2026-07-18 03:24:28",
-      "note": "back 150mm"
+      "x_mm": 250.0,
+      "y_mm": 0.0,
+      "theta_deg": 0.0,
+      "t": "2026-07-25 21:12:36",
+      "note": "set-heading 0.0"
+    },
+    {
+      "x_mm": 250.0,
+      "y_mm": 0.0,
+      "theta_deg": 26.670535316029202,
+      "t": "2026-07-25 21:15:36",
+      "note": "turn right ang=45 dur=0.8s -> dyaw=+26.7deg (matches 8, centre 5, ok); tile-line cross-check (uncalibrated) = -24.5deg"
+    },
+    {
+      "x_mm": 250.0,
+      "y_mm": 0.0,
+      "theta_deg": 30.864216275031083,
+      "t": "2026-07-25 21:16:22",
+      "note": "turn left ang=45 dur=0.8s -> dyaw=+4.2deg (matches 2, centre 0, LOW CONFIDENCE); tile-line cross-check (1-pt calibrated) = -25.6deg"
+    },
+    {
+      "x_mm": 250.0,
+      "y_mm": 0.0,
+      "theta_deg": 0.0,
+      "t": "2026-07-25 21:16:51",
+      "note": "set-heading 0.0"
+    },
+    {
+      "x_mm": 250.0,
+      "y_mm": 0.0,
+      "theta_deg": 11.062004466277841,
+      "t": "2026-07-25 21:17:35",
+      "note": "turn left ang=45 dur=0.8s -> dyaw=+11.1deg from ORB; ORB=+11.1deg(matches 19,centre 6) tile=n/a"
     }
   ],
   "keyframes": [
@@ -46,462 +74,164 @@
       },
       "observations": [
         {
-          "neck_deg": -90.0,
-          "world_bearing_deg": -90.0,
-          "image": "kf0_n-90.jpg",
+          "neck_deg": -80.0,
+          "world_bearing_deg": -80.0,
+          "image": "kf0_n-80.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:01:47",
-          "orb_keypoints": 23,
-          "descriptors_file": "kf0_n-90.jpg.orb.npy"
+          "t": "2026-07-25 21:01:57",
+          "orb_keypoints": 394,
+          "descriptors_file": "kf0_n-80.jpg.orb.npy"
         },
         {
-          "neck_deg": -60.0,
-          "world_bearing_deg": -60.0,
-          "image": "kf0_n-60.jpg",
+          "neck_deg": -40.0,
+          "world_bearing_deg": -40.0,
+          "image": "kf0_n-40.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:01:51",
-          "orb_keypoints": 21,
-          "descriptors_file": "kf0_n-60.jpg.orb.npy"
-        },
-        {
-          "neck_deg": -30.0,
-          "world_bearing_deg": -30.0,
-          "image": "kf0_n-30.jpg",
-          "range_mm": null,
-          "t": "2026-07-18 03:01:52",
-          "orb_keypoints": 169,
-          "descriptors_file": "kf0_n-30.jpg.orb.npy"
+          "t": "2026-07-25 21:01:59",
+          "orb_keypoints": 500,
+          "descriptors_file": "kf0_n-40.jpg.orb.npy"
         },
         {
           "neck_deg": 0.0,
           "world_bearing_deg": 0.0,
           "image": "kf0_n+00.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:01:54",
-          "orb_keypoints": 254,
+          "t": "2026-07-25 21:02:01",
+          "orb_keypoints": 317,
           "descriptors_file": "kf0_n+00.jpg.orb.npy"
         },
         {
-          "neck_deg": 30.0,
-          "world_bearing_deg": 30.0,
-          "image": "kf0_n+30.jpg",
+          "neck_deg": 40.0,
+          "world_bearing_deg": 40.0,
+          "image": "kf0_n+40.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:01:55",
-          "orb_keypoints": 44,
-          "descriptors_file": "kf0_n+30.jpg.orb.npy"
+          "t": "2026-07-25 21:02:02",
+          "orb_keypoints": 99,
+          "descriptors_file": "kf0_n+40.jpg.orb.npy"
         },
         {
-          "neck_deg": 60.0,
-          "world_bearing_deg": 60.0,
-          "image": "kf0_n+60.jpg",
+          "neck_deg": 80.0,
+          "world_bearing_deg": 80.0,
+          "image": "kf0_n+80.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:01:57",
-          "orb_keypoints": 17,
-          "descriptors_file": "kf0_n+60.jpg.orb.npy"
-        },
-        {
-          "neck_deg": 90.0,
-          "world_bearing_deg": 90.0,
-          "image": "kf0_n+90.jpg",
-          "range_mm": null,
-          "t": "2026-07-18 03:01:58",
-          "orb_keypoints": 17,
-          "descriptors_file": "kf0_n+90.jpg.orb.npy"
+          "t": "2026-07-25 21:02:04",
+          "orb_keypoints": 99,
+          "descriptors_file": "kf0_n+80.jpg.orb.npy"
         }
       ],
-      "t": "2026-07-18 03:01:59"
+      "t": "2026-07-25 21:02:06"
     },
     {
       "id": 1,
       "pose": {
-        "x_mm": 200.0,
+        "x_mm": 250.0,
         "y_mm": 0.0,
-        "theta_deg": -46.0
+        "theta_deg": 0.0
       },
       "observations": [
         {
-          "neck_deg": -90.0,
-          "world_bearing_deg": -136.0,
-          "image": "kf1_n-90.jpg",
+          "neck_deg": -80.0,
+          "world_bearing_deg": -80.0,
+          "image": "kf1_n-80.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:06:21",
-          "orb_keypoints": 23,
-          "descriptors_file": "kf1_n-90.jpg.orb.npy"
+          "t": "2026-07-25 21:02:48",
+          "orb_keypoints": 405,
+          "descriptors_file": "kf1_n-80.jpg.orb.npy"
         },
         {
-          "neck_deg": -45.0,
-          "world_bearing_deg": -91.0,
-          "image": "kf1_n-45.jpg",
+          "neck_deg": -40.0,
+          "world_bearing_deg": -40.0,
+          "image": "kf1_n-40.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:06:25",
-          "orb_keypoints": 29,
-          "descriptors_file": "kf1_n-45.jpg.orb.npy"
+          "t": "2026-07-25 21:02:50",
+          "orb_keypoints": 500,
+          "descriptors_file": "kf1_n-40.jpg.orb.npy"
         },
         {
           "neck_deg": 0.0,
-          "world_bearing_deg": -46.0,
+          "world_bearing_deg": 0.0,
           "image": "kf1_n+00.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:06:26",
-          "orb_keypoints": 113,
+          "t": "2026-07-25 21:02:52",
+          "orb_keypoints": 329,
           "descriptors_file": "kf1_n+00.jpg.orb.npy"
         },
         {
-          "neck_deg": 45.0,
-          "world_bearing_deg": -1.0,
-          "image": "kf1_n+45.jpg",
+          "neck_deg": 40.0,
+          "world_bearing_deg": 40.0,
+          "image": "kf1_n+40.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:06:28",
-          "orb_keypoints": 196,
-          "descriptors_file": "kf1_n+45.jpg.orb.npy"
+          "t": "2026-07-25 21:02:53",
+          "orb_keypoints": 90,
+          "descriptors_file": "kf1_n+40.jpg.orb.npy"
         },
         {
-          "neck_deg": 90.0,
-          "world_bearing_deg": 44.0,
-          "image": "kf1_n+90.jpg",
+          "neck_deg": 80.0,
+          "world_bearing_deg": 80.0,
+          "image": "kf1_n+80.jpg",
           "range_mm": null,
-          "t": "2026-07-18 03:06:29",
-          "orb_keypoints": 18,
-          "descriptors_file": "kf1_n+90.jpg.orb.npy"
+          "t": "2026-07-25 21:02:55",
+          "orb_keypoints": 102,
+          "descriptors_file": "kf1_n+80.jpg.orb.npy"
         }
       ],
-      "t": "2026-07-18 03:06:30"
+      "t": "2026-07-25 21:02:56"
     },
     {
       "id": 2,
       "pose": {
-        "x_mm": 95.80124443115041,
-        "y_mm": 107.90097005079767,
-        "theta_deg": -46.0
-      },
-      "observations": [],
-      "t": "2026-07-19 16:57:02"
-    },
-    {
-      "id": 3,
-      "pose": {
-        "x_mm": 95.80124443115041,
-        "y_mm": 107.90097005079767,
-        "theta_deg": -46.0
-      },
-      "observations": [],
-      "t": "2026-07-19 16:58:09"
-    },
-    {
-      "id": 4,
-      "pose": {
-        "x_mm": 95.80124443115041,
-        "y_mm": 107.90097005079767,
-        "theta_deg": -46.0
+        "x_mm": 250.0,
+        "y_mm": 0.0,
+        "theta_deg": 0.0
       },
       "observations": [
         {
           "neck_deg": -80.0,
-          "world_bearing_deg": -126.0,
-          "image": "kf4_n-80.jpg",
+          "world_bearing_deg": -80.0,
+          "image": "kf2_n-80.jpg",
           "range_mm": null,
-          "t": "2026-07-19 17:00:24",
-          "orb_keypoints": null
+          "t": "2026-07-25 21:09:11",
+          "orb_keypoints": 485,
+          "descriptors_file": "kf2_n-80.jpg.orb.npy"
         },
         {
           "neck_deg": -40.0,
-          "world_bearing_deg": -86.0,
-          "image": "kf4_n-40.jpg",
+          "world_bearing_deg": -40.0,
+          "image": "kf2_n-40.jpg",
           "range_mm": null,
-          "t": "2026-07-19 17:00:25",
-          "orb_keypoints": null
+          "t": "2026-07-25 21:09:13",
+          "orb_keypoints": 284,
+          "descriptors_file": "kf2_n-40.jpg.orb.npy"
         },
         {
           "neck_deg": 0.0,
-          "world_bearing_deg": -46.0,
-          "image": "kf4_n+00.jpg",
+          "world_bearing_deg": 0.0,
+          "image": "kf2_n+00.jpg",
           "range_mm": null,
-          "t": "2026-07-19 17:00:27",
-          "orb_keypoints": null
+          "t": "2026-07-25 21:09:15",
+          "orb_keypoints": 101,
+          "descriptors_file": "kf2_n+00.jpg.orb.npy"
         },
         {
           "neck_deg": 40.0,
-          "world_bearing_deg": -6.0,
-          "image": "kf4_n+40.jpg",
+          "world_bearing_deg": 40.0,
+          "image": "kf2_n+40.jpg",
           "range_mm": null,
-          "t": "2026-07-19 17:00:28",
-          "orb_keypoints": null
+          "t": "2026-07-25 21:09:16",
+          "orb_keypoints": 416,
+          "descriptors_file": "kf2_n+40.jpg.orb.npy"
         },
         {
           "neck_deg": 80.0,
-          "world_bearing_deg": 34.0,
-          "image": "kf4_n+80.jpg",
+          "world_bearing_deg": 80.0,
+          "image": "kf2_n+80.jpg",
           "range_mm": null,
-          "t": "2026-07-19 17:00:30",
-          "orb_keypoints": null
+          "t": "2026-07-25 21:09:18",
+          "orb_keypoints": 200,
+          "descriptors_file": "kf2_n+80.jpg.orb.npy"
         }
       ],
-      "t": "2026-07-19 17:00:31"
-    },
-    {
-      "id": 5,
-      "pose": {
-        "x_mm": 95.80124443115041,
-        "y_mm": 107.90097005079767,
-        "theta_deg": -46.0
-      },
-      "observations": [
-        {
-          "neck_deg": -80.0,
-          "world_bearing_deg": -126.0,
-          "image": "kf5_n-80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:03:20",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": -40.0,
-          "world_bearing_deg": -86.0,
-          "image": "kf5_n-40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:03:21",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 0.0,
-          "world_bearing_deg": -46.0,
-          "image": "kf5_n+00.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:03:23",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 40.0,
-          "world_bearing_deg": -6.0,
-          "image": "kf5_n+40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:03:24",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 80.0,
-          "world_bearing_deg": 34.0,
-          "image": "kf5_n+80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:03:26",
-          "orb_keypoints": null
-        }
-      ],
-      "t": "2026-07-19 17:03:27"
-    },
-    {
-      "id": 6,
-      "pose": {
-        "x_mm": 95.80124443115041,
-        "y_mm": 107.90097005079767,
-        "theta_deg": -46.0
-      },
-      "observations": [
-        {
-          "neck_deg": -80.0,
-          "world_bearing_deg": -126.0,
-          "image": "kf6_n-80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:05:16",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": -40.0,
-          "world_bearing_deg": -86.0,
-          "image": "kf6_n-40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:05:18",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 0.0,
-          "world_bearing_deg": -46.0,
-          "image": "kf6_n+00.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:05:19",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 40.0,
-          "world_bearing_deg": -6.0,
-          "image": "kf6_n+40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:05:21",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 80.0,
-          "world_bearing_deg": 34.0,
-          "image": "kf6_n+80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:05:22",
-          "orb_keypoints": null
-        }
-      ],
-      "t": "2026-07-19 17:05:23"
-    },
-    {
-      "id": 7,
-      "pose": {
-        "x_mm": 95.80124443115041,
-        "y_mm": 107.90097005079767,
-        "theta_deg": -46.0
-      },
-      "observations": [
-        {
-          "neck_deg": -80.0,
-          "world_bearing_deg": -126.0,
-          "image": "kf7_n-80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:07:16",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": -40.0,
-          "world_bearing_deg": -86.0,
-          "image": "kf7_n-40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:07:18",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 0.0,
-          "world_bearing_deg": -46.0,
-          "image": "kf7_n+00.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:07:19",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 40.0,
-          "world_bearing_deg": -6.0,
-          "image": "kf7_n+40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:07:21",
-          "orb_keypoints": null
-        },
-        {
-          "neck_deg": 80.0,
-          "world_bearing_deg": 34.0,
-          "image": "kf7_n+80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:07:22",
-          "orb_keypoints": null
-        }
-      ],
-      "t": "2026-07-19 17:07:24"
-    },
-    {
-      "id": 8,
-      "pose": {
-        "x_mm": 95.80124443115041,
-        "y_mm": 107.90097005079767,
-        "theta_deg": -46.0
-      },
-      "observations": [
-        {
-          "neck_deg": -80.0,
-          "world_bearing_deg": -126.0,
-          "image": "kf8_n-80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:16:27",
-          "orb_keypoints": 34,
-          "descriptors_file": "kf8_n-80.jpg.orb.npy"
-        },
-        {
-          "neck_deg": -40.0,
-          "world_bearing_deg": -86.0,
-          "image": "kf8_n-40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:16:29",
-          "orb_keypoints": 71,
-          "descriptors_file": "kf8_n-40.jpg.orb.npy"
-        },
-        {
-          "neck_deg": 0.0,
-          "world_bearing_deg": -46.0,
-          "image": "kf8_n+00.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:16:30",
-          "orb_keypoints": 205,
-          "descriptors_file": "kf8_n+00.jpg.orb.npy"
-        },
-        {
-          "neck_deg": 40.0,
-          "world_bearing_deg": -6.0,
-          "image": "kf8_n+40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:16:32",
-          "orb_keypoints": 246,
-          "descriptors_file": "kf8_n+40.jpg.orb.npy"
-        },
-        {
-          "neck_deg": 80.0,
-          "world_bearing_deg": 34.0,
-          "image": "kf8_n+80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 17:16:33",
-          "orb_keypoints": 274,
-          "descriptors_file": "kf8_n+80.jpg.orb.npy"
-        }
-      ],
-      "t": "2026-07-19 17:16:35"
-    },
-    {
-      "id": 9,
-      "pose": {
-        "x_mm": 95.80124443115041,
-        "y_mm": 107.90097005079767,
-        "theta_deg": -46.0
-      },
-      "observations": [
-        {
-          "neck_deg": -80.0,
-          "world_bearing_deg": -126.0,
-          "image": "kf9_n-80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 21:22:47",
-          "orb_keypoints": 500,
-          "descriptors_file": "kf9_n-80.jpg.orb.npy"
-        },
-        {
-          "neck_deg": -40.0,
-          "world_bearing_deg": -86.0,
-          "image": "kf9_n-40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 21:22:49",
-          "orb_keypoints": 79,
-          "descriptors_file": "kf9_n-40.jpg.orb.npy"
-        },
-        {
-          "neck_deg": 0.0,
-          "world_bearing_deg": -46.0,
-          "image": "kf9_n+00.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 21:22:50",
-          "orb_keypoints": 133,
-          "descriptors_file": "kf9_n+00.jpg.orb.npy"
-        },
-        {
-          "neck_deg": 40.0,
-          "world_bearing_deg": -6.0,
-          "image": "kf9_n+40.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 21:22:52",
-          "orb_keypoints": 25,
-          "descriptors_file": "kf9_n+40.jpg.orb.npy"
-        },
-        {
-          "neck_deg": 80.0,
-          "world_bearing_deg": 34.0,
-          "image": "kf9_n+80.jpg",
-          "range_mm": null,
-          "t": "2026-07-19 21:22:53",
-          "orb_keypoints": 26,
-          "descriptors_file": "kf9_n+80.jpg.orb.npy"
-        }
-      ],
-      "t": "2026-07-19 21:22:55"
+      "t": "2026-07-25 21:09:20"
     }
   ],
   "landmarks": [],
@@ -511,32 +241,19 @@
         "i": 0,
         "j": 1,
         "z": [
-          200.0,
+          250.0,
           0.0,
-          -46.0
+          0.0
         ],
         "sigma_xy_mm": 40.0,
         "sigma_theta_deg": 4.0,
         "kind": "odometry",
-        "t": "2026-07-18 03:06:30"
+        "t": "2026-07-25 21:02:56"
       },
       {
         "i": 1,
         "j": 2,
         "z": [
-          -150.0,
-          0.0,
-          0.0
-        ],
-        "sigma_xy_mm": 40.0,
-        "sigma_theta_deg": 4.0,
-        "kind": "odometry",
-        "t": "2026-07-19 16:57:02"
-      },
-      {
-        "i": 2,
-        "j": 3,
-        "z": [
           0.0,
           0.0,
           0.0
@@ -544,85 +261,7 @@
         "sigma_xy_mm": 40.0,
         "sigma_theta_deg": 4.0,
         "kind": "odometry",
-        "t": "2026-07-19 16:58:09"
-      },
-      {
-        "i": 3,
-        "j": 4,
-        "z": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "sigma_xy_mm": 40.0,
-        "sigma_theta_deg": 4.0,
-        "kind": "odometry",
-        "t": "2026-07-19 17:00:31"
-      },
-      {
-        "i": 4,
-        "j": 5,
-        "z": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "sigma_xy_mm": 40.0,
-        "sigma_theta_deg": 4.0,
-        "kind": "odometry",
-        "t": "2026-07-19 17:03:27"
-      },
-      {
-        "i": 5,
-        "j": 6,
-        "z": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "sigma_xy_mm": 40.0,
-        "sigma_theta_deg": 4.0,
-        "kind": "odometry",
-        "t": "2026-07-19 17:05:23"
-      },
-      {
-        "i": 6,
-        "j": 7,
-        "z": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "sigma_xy_mm": 40.0,
-        "sigma_theta_deg": 4.0,
-        "kind": "odometry",
-        "t": "2026-07-19 17:07:24"
-      },
-      {
-        "i": 7,
-        "j": 8,
-        "z": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "sigma_xy_mm": 40.0,
-        "sigma_theta_deg": 4.0,
-        "kind": "odometry",
-        "t": "2026-07-19 17:16:35"
-      },
-      {
-        "i": 8,
-        "j": 9,
-        "z": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "sigma_xy_mm": 40.0,
-        "sigma_theta_deg": 4.0,
-        "kind": "odometry",
-        "t": "2026-07-19 21:22:55"
+        "t": "2026-07-25 21:09:20"
       }
     ],
     "last_optimize": null

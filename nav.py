@@ -53,6 +53,8 @@ WORLD = os.path.join(STATE_DIR, "world.json")
 VENV_PY = "/home/astra/tools/venv/bin/python3"
 ARM_PY = os.path.join(HERE, "arm.py")
 
+CAMERA_FOV_DEG = 60.0   # assumed horizontal FOV - NO calibration; tune if known
+
 # --- Neck (arm servo 6) geometry -------------------------------------------
 # arm.py: servo units 0..1000 map linearly to -125..+125 deg, 500 = 0 deg.
 NECK_SERVO = 6
@@ -259,6 +261,147 @@ def cmd_set_heading(args):
     cmd_pose(None)
 
 
+def _yaw_from_frames(fa, fb, fov_deg=CAMERA_FOV_DEG, band=90):
+    """Estimate rotation (deg, + = CCW/left) between two forward-camera frames
+    via ORB central-disparity, same technique as kturn.py/dxyaw.py. Returns
+    (yaw_deg, n_good_matches, n_centre_matches) - low n_centre means low
+    confidence (little texture / few matches near the frame centre)."""
+    import cv2
+    import numpy as np
+    ga = cv2.imread(fa, cv2.IMREAD_GRAYSCALE)
+    gb = cv2.imread(fb, cv2.IMREAD_GRAYSCALE)
+    if ga is None or gb is None:
+        return 0.0, 0, 0
+    h, w = ga.shape
+    fx = (w / 2.0) / math.tan(math.radians(fov_deg) / 2.0)
+    cx = w / 2.0
+    orb = cv2.ORB_create(2000)
+    ka, da = orb.detectAndCompute(ga, None)
+    kb, db = orb.detectAndCompute(gb, None)
+    if da is None or db is None:
+        return 0.0, 0, 0
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+    pairs = [p for p in bf.knnMatch(da, db, k=2) if len(p) == 2]
+    good = [m for m, n in pairs if m.distance < 0.75 * n.distance]
+    dxc = [kb[m.trainIdx].pt[0] - ka[m.queryIdx].pt[0] for m in good
+           if abs(ka[m.queryIdx].pt[0] - cx) < band]
+    dall = [kb[m.trainIdx].pt[0] - ka[m.queryIdx].pt[0] for m in good]
+    src = dxc if dxc else dall
+    if not src:
+        return 0.0, len(good), len(dxc)
+    return float(np.median(src)) / fx * 180 / math.pi, len(good), len(dxc)
+
+
+def _yaw_from_tile_lines(fa, fb, min_len_frac=0.25):
+    """Cross-check rotation estimate from the floor tile grout lines (Hough
+    line detection), for when ORB has too little texture to trust (e.g.
+    facing a blank curtain - confirmed live 2026-07-25, ORB reported +/-3deg
+    LOW CONFIDENCE on a turn that a snapshot showed was actually large).
+    Grout lines are near-straight and high-contrast on this floor, visible
+    in almost every forward-camera frame, so this is a good complementary
+    signal when it's available.
+
+    Sign calibrated live 2026-07-25 against a confident ORB reading (centre=5
+    matches): ORB said +26.7deg, raw grout-angle delta was -24.5deg - same
+    magnitude, opposite sign, so the sign is flipped below to match ORB's
+    convention (+ = CCW/left). Only one calibration point though (no
+    independent angle reference on this hardware) - treat magnitude as
+    approximate, and if it and ORB disagree sharply, trust neither blindly.
+    Returns None if no strong enough line is found in either frame."""
+    import cv2
+    import numpy as np
+
+    def dominant_angle(path):
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            return None
+        h, w = img.shape
+        edges = cv2.Canny(img, 50, 150)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 360, threshold=40,
+                                minLineLength=int(min_len_frac * w), maxLineGap=15)
+        if lines is None:
+            return None
+        best_len, best_ang = 0.0, None
+        for x1, y1, x2, y2 in lines.reshape(-1, 4):
+            length = math.hypot(x2 - x1, y2 - y1)
+            ang = math.degrees(math.atan2(y2 - y1, x2 - x1))
+            ang = ((ang + 90) % 180) - 90  # fold to near-horizontal range
+            if abs(ang) > 45:
+                continue  # likely a vertical edge (furniture leg), not grout
+            if length > best_len:
+                best_len, best_ang = length, ang
+        return best_ang
+
+    aa, ab = dominant_angle(fa), dominant_angle(fb)
+    if aa is None or ab is None:
+        return None
+    return -(ab - aa)
+
+
+def cmd_turn(args):
+    """In-place K-turn (weak-steering car can't pivot on one wheel): forward
+    +steer one way then backward+steer the other way, net translation
+    ~cancels. Unlike a plain forward/back, dead reckoning has NO model for
+    this, so we measure the actual rotation via ORB frame comparison
+    (same as kturn.py) and feed it into the pose via set-heading's math -
+    otherwise every out-of-band turn silently desyncs the pose graph (a scan
+    right after a turn would log the OLD heading and a bogus zero-motion
+    odometry edge to the next keyframe)."""
+    w = load_world()
+    other = "left" if args.side == "right" else "right"
+    os.makedirs(FRAMES_DIR, exist_ok=True)
+    ref = os.path.join(FRAMES_DIR, "_turn_ref.jpg")
+    aft = os.path.join(FRAMES_DIR, "_turn_aft.jpg")
+
+    car.steer("center", 90)
+    time.sleep(0.2)
+    car.snapshot(ref)
+    car.steer(args.side, args.angle)
+    time.sleep(0.25)
+    car.move("forward", args.speed, args.duration)
+    car.steer(other, args.angle)
+    time.sleep(0.25)
+    car.move("backward", args.speed, args.duration)
+    car.steer("center", 90)
+    time.sleep(0.4)
+    car.snapshot(aft)
+
+    orb_dyaw, n_good, n_centre = _yaw_from_frames(ref, aft)
+    orb_confident = n_centre >= 5
+    tile_dyaw = _yaw_from_tile_lines(ref, aft)
+
+    # Prefer ORB when it has enough central matches to trust (it directly
+    # measures apparent motion of real 3D features, no floor-flatness
+    # assumption); otherwise fall back to the tile-line estimate, which held
+    # up better in a low-texture (blank curtain) scene in live testing
+    # 2026-07-25 - ORB reported near-zero/LOW CONFIDENCE on a turn a snapshot
+    # confirmed was real, while tile-line correctly reported it.
+    if orb_confident:
+        dyaw, source = orb_dyaw, "ORB"
+    elif tile_dyaw is not None:
+        dyaw, source = tile_dyaw, "tile-line (ORB low confidence)"
+    else:
+        dyaw, source = orb_dyaw, "ORB (low confidence, no tile-line fallback available)"
+
+    w["pose"]["theta_deg"] = (w["pose"]["theta_deg"] + dyaw + 180) % 360 - 180
+    w["trajectory"].append({**w["pose"], "t": _now(),
+                            "note": f"turn {args.side} ang={args.angle} dur={args.duration}s "
+                                    f"-> dyaw={dyaw:+.1f}deg from {source}; "
+                                    f"ORB={orb_dyaw:+.1f}deg(matches {n_good},centre {n_centre}) "
+                                    f"tile={'n/a' if tile_dyaw is None else f'{tile_dyaw:+.1f}deg'}"})
+    save_world(w)
+    print(f"turn side={args.side} ang={args.angle} spd={args.speed} dur={args.duration}s")
+    print(f"  ORB dyaw={orb_dyaw:+.1f} deg (matches {n_good}, centre {n_centre})"
+          + ("" if orb_confident else "  -- LOW CONFIDENCE"))
+    print(f"  tile-line dyaw: "
+          + ("no strong line found" if tile_dyaw is None else f"{tile_dyaw:+.1f} deg"))
+    print(f"  -> using {source}: dyaw={dyaw:+.1f} deg")
+    if not orb_confident and tile_dyaw is None:
+        print("  WARNING: neither estimate is trustworthy here - verify with a "
+              "snapshot before relying on theta_deg")
+    cmd_pose(None)
+
+
 def cmd_scan(args):
     w = load_world()
     os.makedirs(FRAMES_DIR, exist_ok=True)
@@ -317,9 +460,6 @@ def cmd_scan(args):
 
 
 # --- Metric triangulation (feature matches -> world landmarks) --------------
-CAMERA_FOV_DEG = 60.0   # assumed horizontal FOV - NO calibration; tune if known
-
-
 def _intrinsics(w_px, h_px, fov_deg=CAMERA_FOV_DEG):
     fx = (w_px / 2.0) / math.tan(math.radians(fov_deg) / 2.0)
     return fx, fx, w_px / 2.0, h_px / 2.0    # fx, fy(=fx), cx, cy
@@ -789,6 +929,12 @@ def main():
     b.add_argument("mm", type=float)
     sh = sub.add_parser("set-heading", help="manual pose correction (deg)")
     sh.add_argument("deg", type=float)
+    tn = sub.add_parser("turn", help="in-place K-turn, heading measured via ORB "
+                        "frame comparison and fed into the pose")
+    tn.add_argument("side", choices=["left", "right"])
+    tn.add_argument("angle", type=int, nargs="?", default=45, help="steer angle 10-60")
+    tn.add_argument("speed", type=int, nargs="?", default=55, help="0-100")
+    tn.add_argument("duration", type=float, nargs="?", default=0.8, help="seconds per phase")
     sc = sub.add_parser("scan", help="neck sweep, save pose-tagged frames")
     sc.add_argument("--neck", default="-80,-40,0,40,80",
                     help="comma-separated neck angles in degrees")
@@ -836,9 +982,9 @@ def main():
 
     args = p.parse_args()
     {"init": cmd_init, "pose": cmd_pose, "forward": cmd_forward, "back": cmd_back,
-     "set-heading": cmd_set_heading, "scan": cmd_scan, "lookout": cmd_lookout,
-     "landmarks": cmd_landmarks, "motionmap": cmd_motionmap, "map": cmd_map,
-     "loop-detect": cmd_loop_detect, "optimize": cmd_optimize,
+     "set-heading": cmd_set_heading, "turn": cmd_turn, "scan": cmd_scan,
+     "lookout": cmd_lookout, "landmarks": cmd_landmarks, "motionmap": cmd_motionmap,
+     "map": cmd_map, "loop-detect": cmd_loop_detect, "optimize": cmd_optimize,
      "fuse-landmarks": cmd_fuse_landmarks}[args.cmd](args)
 
 
