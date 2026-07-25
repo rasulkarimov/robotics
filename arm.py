@@ -145,7 +145,40 @@ def move_one(arm, servo_id, position, duration_ms=1000, wait=True):
     duration_ms = max(MIN_DURATION_MS, int(duration_ms))
     if not (0 <= position <= 1000):
         raise ValueError("position must be 0-1000 (500 = center)")
+    base_swing_guard(arm, [servo_id])
     arm.setPosition(servo_id, position, duration=duration_ms, wait=wait)
+
+
+# Joints that must be in (or near) their HOME_POSE values before the base is
+# allowed to swing. User warning 2026-07-25: rotating servo 6 while the arm is
+# reached out / folded down swings the wrist and claw through the chassis - the
+# claw can catch on the car body and the ultrasonic bracket. From HOME_POSE the
+# arm is tucked up clear of everything, so the base can turn freely.
+# LOOKOUT_POSE in nav.py deliberately reuses HOME_POSE's 3/4/5, so scanning
+# (which sweeps the base at lookout) is already in the safe configuration.
+BASE_SAFE_JOINTS = (3, 4, 5)
+BASE_SAFE_TOL = 60      # servo units (~15 deg) of slack around HOME_POSE
+
+
+def base_swing_guard(arm, target_ids):
+    """Warn if the base (servo 6) is about to swing while the arm is not tucked
+    into its home configuration. Advisory only - it prints and continues rather
+    than refusing, because some deliberate poses (a low reach at a small base
+    delta) are fine and a hard block would be worse than a warning."""
+    if 6 not in target_ids:
+        return
+    try:
+        cur = positions(arm, list(BASE_SAFE_JOINTS))
+    except Exception:
+        return
+    off = {j: (cur[j], HOME_POSE[j]) for j in BASE_SAFE_JOINTS
+           if j in cur and abs(cur[j] - HOME_POSE[j]) > BASE_SAFE_TOL}
+    if off:
+        detail = ", ".join(f"servo {j}: {c} vs home {h}" for j, (c, h) in off.items())
+        print(f"WARNING: rotating the base while the arm is NOT in home pose "
+              f"({detail}). The claw/wrist can catch the chassis or the ultrasonic "
+              f"bracket. Run `arm.py home` first unless you know this pose clears it.",
+              file=sys.stderr)
 
 
 def release(arm, ids=None):
@@ -171,6 +204,10 @@ def step(arm, moves, path, duration_ms=1000, settle=0.15):
     for servo_id, position in moves:
         if not (0 <= position <= 1000):
             raise ValueError(f"servo {servo_id}: position must be 0-1000")
+    # Only guard a base move that ISN'T accompanied by 3/4/5 in the same call:
+    # a simultaneous multi-joint move (e.g. going to a pose) lands them together.
+    if not any(m[0] in BASE_SAFE_JOINTS for m in moves):
+        base_swing_guard(arm, [m[0] for m in moves])
     if len(moves) == 1:
         arm.setPosition(moves[0][0], moves[0][1], duration=duration_ms, wait=False)
     else:
