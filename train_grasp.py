@@ -41,8 +41,8 @@ import tanggrab
 
 LOG = "/home/astra/robotics/train_grasp_log.csv"
 FIELDS = ["ts", "stage", "rep", "hint_base", "hint_R", "held", "shift1", "shift2",
-          "long_ang", "aspect", "clipped", "rot", "attempts", "grasp_s", "place_s",
-          "total_s", "off_centre_px", "place_err_px", "batt_v", "note"]
+          "long_ang", "aspect", "clipped", "rot", "attempts", "aim_err_px", "grasp_s",
+          "place_s", "total_s", "off_centre_px", "place_err_px", "batt_v", "note"]
 
 BATT_FLOOR = 6.6      # arm.py warns lower than this; the pack sagged to 6.47 V under load once
 PHASE_PAUSE = 1.2     # seconds between reps - suspected current-spike reboots without it
@@ -123,12 +123,12 @@ def one_rep(stage, rep, hint_base, hint_R, place_at=None):
             long_ang=round(long_ang, 1) if long_ang else "",
             aspect=round(aspect, 2) if aspect else "",
             clipped=clipped, rot=res.get("rot", ""), attempts=res.get("attempts", ""),
-            grasp_s=grasp_s, place_s=place_s,
+            aim_err_px=res.get("aim_err", ""), grasp_s=grasp_s, place_s=place_s,
             total_s=round(time.time() - t0, 1), off_centre_px=off_centre,
             place_err_px=place_err, batt_v=v)
     print(f"  [{stage} rep{rep}] held={held} {grasp_s}s shifts=({s1},{s2}) "
-          f"off_centre={off_centre}px ang={long_ang} aspect={aspect} "
-          f"clipped={clipped} rot={res.get('rot')} batt={v}")
+          f"aim_err={res.get('aim_err')}px off_centre={off_centre}px ang={long_ang} "
+          f"aspect={aspect} clipped={clipped} rot={res.get('rot')} batt={v}")
     return res
 
 

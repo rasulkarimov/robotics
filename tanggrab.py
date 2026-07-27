@@ -94,13 +94,24 @@ BAR_MIN_SOLIDITY = 0.65    # contour area / convex-hull area
 # look as bar-like as the bar itself, and thresholds tight enough to reject it also rejected
 # real bar views (measured extent 0.62-0.78 for the bar vs 0.31-0.43 for glow - overlapping
 # once blur is involved). Measured mean saturation, though:
-#     bar   112, 123      <- pencil-shaded blue, PALE
+#     bar   112, 123      <- pencil-shaded blue, PALE (measured far/normal range, R>=140mm)
 #     LEDs  155
 #     glow  166, 227      <- an emitter, vivid
 # So the test is an UPPER bound, which is the opposite of the intuition that "the real object
 # is the more colourful one". Scene-specific: it holds because this bar is coloured in by
 # hand. A glossy, vividly-blue object would need this raised or replaced.
-BAR_MAX_SATURATION = 140
+#
+# SATURATION IS ALSO DISTANCE-DEPENDENT, and the original 140 didn't account for it. Measured
+# 2026-07-27: at the normal R>=140mm hover the bar reads 105-124 (matches calibration above),
+# but after centring pulls R below ~140mm (which the corrected BASE_PER_PX/R_PER_PX gains and
+# a live-measured GRASP_PIXEL now legitimately do - see rig.py) the SAME bar read 172-173,
+# six calls in a row, and got rejected as "glow" every time - 0/4 held in a drill, with no
+# grasp even attempted (measure() returning None aborts before aim/clamp). The rejected blob's
+# extent (0.72-0.92) and solidity (0.87-0.92) matched the BAR signature exactly, nothing like
+# glow's 0.31-0.53/0.53-0.75 - so raising the ceiling here does not reopen the glow false-
+# positive, it only affects a case shape already disambiguates. Raised with margin above the
+# observed close-range peak; re-verify if grasps start closing on the strip again.
+BAR_MAX_SATURATION = 190
 
 
 def _mean_saturation(c):
@@ -432,6 +443,12 @@ def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
     if gz is not None:
         rig.GRASP_Z = gz
     HIGH = rig.GRASP_Z + 60.0
+    # Last wiggle-test result seen this call, kept across attempts so a final failure can
+    # still report HOW CLOSE it was (train_grasp.py logged nothing at all for failed reps
+    # before this - every miss looked identical whether it slid 20px or 200px, which made
+    # "is the closing moment borderline or just wrong" unanswerable from the log).
+    last_shifts = (None, None)
+    last_aim_err = None
     # Where the jaws really close, measured now - the stored constant goes stale across
     # mountings and steers every grasp off to one side while the aim loop still reports
     # clean convergence. One move, and it removes the whole failure mode. See rig.py.
@@ -486,6 +503,12 @@ def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
         rig.GRASP_PIXEL = base_gp
         if r:
             x, y = r
+        # How far off the aim actually landed, independent of whether the grip later held -
+        # separates "aim converged but the jaws still slipped" (mechanical) from "aim never
+        # got close" (still an aiming problem), which a bare held=False can't distinguish.
+        p_final = pe.see()
+        target = (base_gp[0] + aim_dx, base_gp[1] + aim_dy) if rot != NEUTRAL else base_gp
+        last_aim_err = round(math.dist(p_final, target), 1) if p_final else None
         if rot != NEUTRAL:
             pe.arm_step(f"2:{rot}", 900); time.sleep(0.4)
         if not pe.goto(x, y, rig.GRASP_Z, 1400):
@@ -494,10 +517,11 @@ def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
         pe.arm_step(f"1:{pe.CLAMP}", 900); time.sleep(0.3)
         pe.goto(x, y, rig.GRASP_Z + 90, 1500)
         held, s1, s2 = wiggle_held_test(log=log)
+        last_shifts = (s1, s2)
         if held:
             return {"held": True, "shifts": (s1, s2), "long_ang": long_ang,
                     "base": base, "R": R, "x": x, "y": y, "rot": rot,
-                    "attempts": attempt + 1}
+                    "attempts": attempt + 1, "aim_err": last_aim_err}
         # Put it DOWN before letting go. After a failed wiggle the arm is parked ~90 mm up,
         # and opening the jaws there drops the bar - it bounces and skitters to a new spot,
         # which invalidates the hint and makes the next attempt hunt for it (user, watching
@@ -510,7 +534,7 @@ def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
         # doesn't inherit a rotated claw it never asked for (bit a live session 2026-07-26:
         # the rotated jaws produced misleading frames for everything after).
         pe.arm_step(f"2:{NEUTRAL}", 500)
-    return {"held": False, "attempts": 1 + retries}
+    return {"held": False, "attempts": 1 + retries, "shifts": last_shifts, "aim_err": last_aim_err}
 
 
 def place(x, y, gz):
