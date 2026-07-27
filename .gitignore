@@ -20,3 +20,6 @@ nav_state/frames/
 # Orbit debug output (images + run logs)
 orbit_out/
 *.log
+
+# Continuous telemetry (ever-growing, no reason to version)
+health_log.csv
