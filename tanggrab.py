@@ -85,47 +85,21 @@ def wrist_for_bar(long_ang, aspect):
 #   bar     27247     2.98    0.62     0.75   <- same bar, different view
 #   glow     9549     3.46    0.31     0.53
 #   sliver    797     2.94    0.43     0.58
-BAR_MIN_EXTENT = 0.50      # contour area / minAreaRect area
-BAR_MIN_SOLIDITY = 0.65    # contour area / convex-hull area
-
-
-# Mean HSV saturation inside the contour, and it is the ONE feature that separates the bar
-# from the power strip's blue glow cleanly. Shape does not: the glow is long, thin and can
-# look as bar-like as the bar itself, and thresholds tight enough to reject it also rejected
-# real bar views (measured extent 0.62-0.78 for the bar vs 0.31-0.43 for glow - overlapping
-# once blur is involved). Measured mean saturation, though:
-#     bar   112, 123      <- pencil-shaded blue, PALE (measured far/normal range, R>=140mm)
-#     LEDs  155
-#     glow  166, 227      <- an emitter, vivid
-# So the test is an UPPER bound, which is the opposite of the intuition that "the real object
-# is the more colourful one". Scene-specific: it holds because this bar is coloured in by
-# hand. A glossy, vividly-blue object would need this raised or replaced.
-#
-# SATURATION IS ALSO DISTANCE-DEPENDENT, and the original 140 didn't account for it. Measured
-# 2026-07-27: at the normal R>=140mm hover the bar reads 105-124 (matches calibration above),
-# but after centring pulls R below ~140mm (which the corrected BASE_PER_PX/R_PER_PX gains and
-# a live-measured GRASP_PIXEL now legitimately do - see rig.py) the SAME bar read 172-173,
-# six calls in a row, and got rejected as "glow" every time - 0/4 held in a drill, with no
-# grasp even attempted (measure() returning None aborts before aim/clamp). The rejected blob's
-# extent (0.72-0.92) and solidity (0.87-0.92) matched the BAR signature exactly, nothing like
-# glow's 0.31-0.53/0.53-0.75 - so raising the ceiling here does not reopen the glow false-
-# positive, it only affects a case shape already disambiguates. Raised with margin above the
-# observed close-range peak; re-verify if grasps start closing on the strip again.
-BAR_MAX_SATURATION = 190
-
-
-def _mean_saturation(c):
-    import numpy as _np
-    x, y, w, h = cv2.boundingRect(c)
-    if w <= 0 or h <= 0:
-        return 255.0
-    img = _LAST_FRAME_HSV
-    if img is None:
-        return 0.0
-    mask = _np.zeros(img.shape[:2], _np.uint8)
-    cv2.drawContours(mask, [c], -1, 255, -1)
-    vals = img[:, :, 1][mask > 0]
-    return float(vals.mean()) if vals.size else 255.0
+# EXTENT/SOLIDITY/SATURATION thresholds and the saturation helper now live in pick_eye.py
+# (OBJ_MIN_EXTENT/OBJ_MIN_SOLIDITY/OBJ_MAX_SATURATION/_mean_saturation) - moved there
+# 2026-07-27 so pe.see() (search/centring, called BEFORE this module's orientation check
+# ever runs) applies the exact same bar-vs-glow test instead of a weaker aspect-only one.
+# It had locked onto the power cable's glow (area 5054, aspect 3.35 - elongated enough to
+# pass see()'s old check) and reported "found" with high confidence; a human spotted it
+# from the sent photo, not the code. Kept as aliases here so existing callers/comments in
+# this file don't need to change: BAR_MIN_EXTENT == pe.OBJ_MIN_EXTENT (0.50), BAR_MIN_SOLIDITY
+# == pe.OBJ_MIN_SOLIDITY (0.65), BAR_MAX_SATURATION == pe.OBJ_MAX_SATURATION (190, raised from
+# the original 140 - see pe.OBJ_MAX_SATURATION's docstring for the distance-dependence that
+# made 140 too tight once centring started legitimately closing to R<140mm).
+BAR_MIN_EXTENT = pe.OBJ_MIN_EXTENT
+BAR_MIN_SOLIDITY = pe.OBJ_MIN_SOLIDITY
+BAR_MAX_SATURATION = pe.OBJ_MAX_SATURATION
+_mean_saturation = lambda c: pe._mean_saturation(c, _LAST_FRAME_HSV)
 
 
 _LAST_FRAME_HSV = None

@@ -131,6 +131,53 @@ OBJ_UNAMBIGUOUS_AREA = 15000
 # a USB plug is small AND compact and would be rejected by every one of them.
 OBJ_SHAPE_MIN_AREA = 2000
 
+# EXTENT/SOLIDITY/SATURATION - ported in from tanggrab.py's bar-orientation filter 2026-07-27
+# after see() (used by locate_near/center_grabframe for SEARCH+CENTRING, i.e. BEFORE the arm
+# even tries to read orientation) locked onto the power cable's blue glow along the frame's
+# left edge - area 5054, aspect 3.35, comfortably elongated enough to pass the check above -
+# and reported "found" with high confidence. It only ever got caught downstream because a
+# human looked at the sent photo; tanggrab.measure()'s stricter filter (which already had
+# these three checks) would have rejected it too, IF centring had gotten that far without
+# aiming the whole arm at the cable first. Search must not lock onto it in the first place.
+OBJ_MIN_EXTENT = 0.50      # contour area / minAreaRect area - the cable's glow is diffuse/ragged
+OBJ_MIN_SOLIDITY = 0.65    # contour area / convex-hull area
+OBJ_MAX_SATURATION = 190   # upper bound: this bar is pencil-pale, glow/LEDs are vivid. Also
+                           # distance-dependent (closer views of the SAME bar read higher) -
+                           # see tanggrab.BAR_MAX_SATURATION's note before tightening this.
+
+
+def _mean_saturation(c, hsv):
+    x, y, w, h = cv2.boundingRect(c)
+    if w <= 0 or h <= 0:
+        return 255.0
+    mask = np.zeros(hsv.shape[:2], np.uint8)
+    cv2.drawContours(mask, [c], -1, 255, -1)
+    vals = hsv[:, :, 1][mask > 0]
+    return float(vals.mean()) if vals.size else 255.0
+
+
+def _bar_shaped(c, hsv):
+    """True if contour c's shape+colour match the bar, not a round LED or a cable glow.
+
+    The one shared predicate for both see() (search/centring) and tanggrab.measure()
+    (orientation) - kept in one place after the two drifted apart and see() alone let the
+    cable glow through (it only checked aspect, not extent/solidity/saturation)."""
+    a = cv2.contourArea(c)
+    if a < OBJ_SHAPE_MIN_AREA:
+        return False
+    (_, _), (w, h), _ = cv2.minAreaRect(c)
+    if max(w, h) / max(1.0, min(w, h)) < OBJ_MIN_ASPECT:
+        return False
+    extent = a / max(1.0, w * h)
+    if extent < OBJ_MIN_EXTENT:
+        return False
+    hull = cv2.convexHull(c)
+    if a / max(1.0, cv2.contourArea(hull)) < OBJ_MIN_SOLIDITY:
+        return False
+    if _mean_saturation(c, hsv) > OBJ_MAX_SATURATION:
+        return False
+    return True
+
 
 def see():
     """Where the object is in the image right now (wrist camera)."""
@@ -139,24 +186,25 @@ def see():
     m = cv2.inRange(hsv, OBJ_LO, OBJ_HI)
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
-    n, _, stats, cent = cv2.connectedComponentsWithStats(m)
+    cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     best = []
-    for i in range(1, n):
-        a = stats[i, cv2.CC_STAT_AREA]
+    for c in cnts:
+        a = cv2.contourArea(c)
         if not (OBJ_MIN_AREA <= a <= OBJ_MAX_AREA):
             continue
-        if OBJ_REQUIRE_ELONGATED and a < OBJ_UNAMBIGUOUS_AREA:
-            if a < OBJ_SHAPE_MIN_AREA:
-                continue          # too small to be the bar; thin glow slivers land here
-            w, h = stats[i, cv2.CC_STAT_WIDTH], stats[i, cv2.CC_STAT_HEIGHT]
-            if max(w, h) / max(1, min(w, h)) < OBJ_MIN_ASPECT:
-                continue          # round -> an indicator LED or a socket, not the bar
-        best.append((a, i))
+        # Above OBJ_UNAMBIGUOUS_AREA the shape/colour test is skipped: a HELD bar fills much
+        # of the frame and gets clipped, which drags extent/aspect down and would otherwise
+        # blind the wiggle test on a genuinely good grasp.
+        if OBJ_REQUIRE_ELONGATED and a < OBJ_UNAMBIGUOUS_AREA and not _bar_shaped(c, hsv):
+            continue
+        best.append((a, c))
     if not best:
         return None
     best.sort(key=lambda t: -t[0])
-    c = cent[best[0][1]]
-    return float(c[0]), float(c[1])
+    M = cv2.moments(best[0][1])
+    if M["m00"] == 0:
+        return None
+    return M["m10"] / M["m00"], M["m01"] / M["m00"]
 
 
 # Jaw markers are ~2500-3300 px at grasping distance (rig.py). The window is generous on
