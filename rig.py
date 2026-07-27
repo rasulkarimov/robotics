@@ -25,11 +25,17 @@ ARM_ABOVE_FLOOR = 110.0     # arm base height above the floor, now that it's on 
 # (close the jaws, step down 5 mm at a time until they touch), and don't trust a stale
 # value. There is no automatic contact detector - the arm is strong enough to LIFT THE CAR
 # rather than stall, so servo feedback stays clean while the wheels leave the ground.
-GRASP_Z = -65.0        # re-measured live 2026-07-19 with the user (stepped down in 5-10mm
-                       # increments, jaws closed, until confirmed touching floor; verified
-                       # by raising back up and re-descending to the same value). Was -75.0
-                       # before this session - a 10mm shift, within GRASP_Z_DRIFT below, so
-                       # this is ordinary drift, not evidence of a different arm mounting.
+GRASP_Z = -75.0        # re-measured 2026-07-27, AFTER the robot fell over and was stood back
+                       # up. Was -65.0. Found from the user watching a drill ("ты примерно на
+                       # 1 см выше делал хват") and confirmed by a clean sweep at one spot:
+                       #   -55 -> wiggle 294/417 px (way off)
+                       #   -65 -> wiggle 130-180 px (close, never held)
+                       #   -75 -> wiggle 4.4/6.4 px, HELD first attempt
+                       # Note the failure signature of grasping TOO HIGH looked exactly like
+                       # bad aim: the aim loop converged to a few px and the object still
+                       # slid away in the wiggle test. Height and aim are NOT distinguishable
+                       # from the aim error alone - sweep gz before blaming the aim.
+                       # (Was -75.0 before 2026-07-19 too, so this rig seems to sit near -75.)
 GRASP_Z_DRIFT = 15.0   # observed spread between measurements; budget for it
 
 # The same floor, felt with the jaws OPEN. Closed jaws reach 20 mm LOWER than open ones,
@@ -90,6 +96,25 @@ BASE_BACKLASH_UNITS = 3
 # "manoeuvre the object onto that pixel, then close". No camera model, no zone - it works
 # anywhere the arm can reach.
 CLAW_IS_FIXED_IN_IMAGE = True
+
+# ...BUT THE VALUE BELOW GOES STALE, AND A STALE ONE FAILS SILENTLY. "Fixed in the image"
+# holds for a given camera mounting; it does NOT survive a remount. Measured live twice on
+# 2026-07-26 and it was nowhere near this constant:
+#     (325, 342) at base=480 R=165 z=GRASP_Z+38   (USB plug pose)
+#     (392, 238) at base=326 R=165 z=GRASP_Z+60   (blue bar pose)
+# i.e. ~220 px right and ~90 px down of (170, 146). Since the aim loop drives the object ONTO
+# this pixel, a stale value steers the object CONSISTENTLY OFF TO ONE SIDE of the real jaws -
+# the object lands under one claw and the grasp closes beside it. The failure looks like bad
+# luck, not bad calibration: the aim loop reports beautiful convergence (7-17 px) every time,
+# because it is converging perfectly onto the wrong point. Four straight grasps failed this
+# way before the user spotted it from the side ("брус попадает под левую клешню все время").
+# Re-measuring and aiming at the live value grasped it first try (wiggle 9 px).
+#
+# SO: MEASURE IT LIVE at the start of a session, don't trust this number. One extra move:
+#     arm.py step "1:700" ref.jpg 900      # close the empty jaws, grab a frame
+#     # find the 2 red jaw markers (HSV ~[0-15]&[165-180], S>60, V>50, area>150);
+#     # the midpoint of the two centroids IS the closing point for this pose.
+# The residual pose-to-pose variation is small; the mounting-to-mounting drift is not.
 GRASP_PIXEL = (170.0, 146.0)   # midpoint of the two jaw markers with the jaws CLOSED
 
 # Blob-detection constants are VIEW-DEPENDENT and were all silently wrong after the camera

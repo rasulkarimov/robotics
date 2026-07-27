@@ -103,6 +103,34 @@ OBJ_LO = np.array([95, 80, 50])
 OBJ_HI = np.array([130, 255, 255])
 OBJ_MIN_AREA, OBJ_MAX_AREA = 400, 90000
 
+# ...and colour ALONE is not enough in this workspace. The power strip sits in frame and its
+# blue indicator LEDs (plus the bluish sockets) pass the hue test easily. They read as blobs
+# of 500-4400 px with aspect 1.0-1.7, and the aim loop happily drove the arm to a LED and
+# grasped bare floor (user: "хватит дрочить синие фонари на блоке питания", and earlier "ты
+# пытаешься схватить пустой пол"). They are also why the wrist rotation kept switching off:
+# wrist_for_bar ignores anything with aspect < 1.8, and a round LED always looks round.
+#
+# The bar is BIG and ELONGATED; the impostors are small and round. Requiring both separates
+# them cleanly on the measured numbers. Set OBJ_REQUIRE_ELONGATED = False for a compact
+# target (the USB plug), where this test would reject the real object too - then the LEDs
+# have to be excluded some other way (cover them, or move the strip out of frame).
+OBJ_MIN_ASPECT = 1.9
+OBJ_REQUIRE_ELONGATED = True
+# Above this area the blob cannot be an impostor (the biggest LED/socket blob measured was
+# 4400 px) so the shape test is skipped. It has to be: once the bar is HELD it fills much of
+# the frame and gets clipped, which drags its bounding-box aspect below the threshold. That
+# made see() return None during the wiggle test, and a grasp that was probably GOOD got
+# scored "NOT held" because the checker had gone blind.
+# Must sit ABOVE the largest impostor and BELOW the real bar: measured bar 21377 px, the
+# blue glow smeared along the power cable 9549 px. 8000 was tried first and let the glow
+# through unchecked - locate() then reported "found" on a frame containing no bar at all.
+OBJ_UNAMBIGUOUS_AREA = 15000
+# Elongation alone still lets thin GLOW SLIVERS through (measured 1332 px at aspect 2.79 in
+# a frame with no bar in it). The bar is never that small in a usable view, so require some
+# bulk as well. NOTE: this, OBJ_MIN_ASPECT and OBJ_REQUIRE_ELONGATED are all bar-specific -
+# a USB plug is small AND compact and would be rejected by every one of them.
+OBJ_SHAPE_MIN_AREA = 2000
+
 
 def see():
     """Where the object is in the image right now (wrist camera)."""
@@ -112,13 +140,101 @@ def see():
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
     n, _, stats, cent = cv2.connectedComponentsWithStats(m)
-    best = [(stats[i, cv2.CC_STAT_AREA], i) for i in range(1, n)
-            if OBJ_MIN_AREA <= stats[i, cv2.CC_STAT_AREA] <= OBJ_MAX_AREA]
+    best = []
+    for i in range(1, n):
+        a = stats[i, cv2.CC_STAT_AREA]
+        if not (OBJ_MIN_AREA <= a <= OBJ_MAX_AREA):
+            continue
+        if OBJ_REQUIRE_ELONGATED and a < OBJ_UNAMBIGUOUS_AREA:
+            if a < OBJ_SHAPE_MIN_AREA:
+                continue          # too small to be the bar; thin glow slivers land here
+            w, h = stats[i, cv2.CC_STAT_WIDTH], stats[i, cv2.CC_STAT_HEIGHT]
+            if max(w, h) / max(1, min(w, h)) < OBJ_MIN_ASPECT:
+                continue          # round -> an indicator LED or a socket, not the bar
+        best.append((a, i))
     if not best:
         return None
     best.sort(key=lambda t: -t[0])
     c = cent[best[0][1]]
     return float(c[0]), float(c[1])
+
+
+# Jaw markers are ~2500-3300 px at grasping distance (rig.py). The window is generous on
+# both sides for lighting/partial occlusion, but MUST exclude background objects.
+MARKER_AREA_MIN, MARKER_AREA_MAX = 800, 12000
+MARKER_AREA_RATIO = 4.0   # the two markers are the same size; a big mismatch means an impostor
+
+
+def measure_grasp_pixel(restore_grip=OPEN, samples=3):
+    """Median of `samples` measurements - see _measure_grasp_pixel_once for the mechanics.
+
+    A single reading is not trustworthy: the FIRST one after a move is regularly an outlier
+    (measured (218,255) then (188,354) at the same pose, and (258,268) then (187,350)), which
+    silently poisons the aim it feeds. The arm is still settling, and a marker caught
+    mid-wobble lands tens of px out. Taking the median of a few costs a second and throws
+    the outlier away."""
+    pts = []
+    for i in range(samples):
+        if i:
+            time.sleep(0.25)
+        p = _measure_grasp_pixel_once(restore_grip if i == samples - 1 else 700)
+        if p:
+            pts.append(p)
+    if not pts:
+        return None
+    xs = sorted(p[0] for p in pts)
+    ys = sorted(p[1] for p in pts)
+    rig.GRASP_PIXEL = (xs[len(xs) // 2], ys[len(ys) // 2])
+    return rig.GRASP_PIXEL
+
+
+def _measure_grasp_pixel_once(restore_grip=OPEN):
+    """Find where the jaws ACTUALLY close in the image right now, and set rig.GRASP_PIXEL.
+
+    Costs one move. Call it once at the start of any session that grasps - see the long
+    note on rig.GRASP_PIXEL for why the stored constant cannot be trusted across mountings,
+    and why a stale one fails while the aim loop reports perfect convergence.
+
+    Returns the (x, y) it measured, or None if the two red jaw markers weren't both found
+    (in which case rig.GRASP_PIXEL is left alone)."""
+    arm_step(f"1:700", 900)                      # close the empty jaws
+    img = pick.frame()
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    m = (cv2.inRange(hsv, np.array([0, 60, 50]), np.array([15, 255, 255])) |
+         cv2.inRange(hsv, np.array([165, 60, 50]), np.array([180, 255, 255])))
+    cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    blobs = []
+    for c in cnts:
+        a = cv2.contourArea(c)
+        # AREA WINDOW, and it is load-bearing. The jaw markers cover ~2500-3300 px from a few
+        # centimetres away (rig.py). Without an upper bound, any big red/orange thing in the
+        # BACKGROUND wins: with a sofa in view a 34000 px blob was being taken for a marker,
+        # and since it moves through the frame as the arm swings, the "closing point" wandered
+        # ~200 px between poses and ~90 px at the SAME pose. That looked exactly like a loose
+        # camera mount and sent me hunting a hardware fault that did not exist.
+        if not (MARKER_AREA_MIN <= a <= MARKER_AREA_MAX):
+            continue
+        M = cv2.moments(c)
+        if M["m00"] == 0:
+            continue
+        blobs.append((a, M["m10"] / M["m00"], M["m01"] / M["m00"]))
+    arm_step(f"1:{restore_grip}", 700)
+
+    # Take the two BIGGEST qualifying blobs and use their midpoint. Do NOT split the frame
+    # down the middle and demand one marker per half: the markers only straddle the centre
+    # in some poses. Measured live with both jaw markers plainly visible at x=313 and x=52,
+    # i.e. both LEFT of centre - the half-split found nothing on the right and the whole
+    # measurement failed, silently falling back to the stale stored constant.
+    blobs.sort(key=lambda b: -b[0])
+    if len(blobs) < 2:
+        return None
+    a, b = blobs[0], blobs[1]
+    # Sanity: the two markers are the same physical size, so wildly unequal areas mean one of
+    # them is not a marker.
+    if a[0] > MARKER_AREA_RATIO * b[0]:
+        return None
+    rig.GRASP_PIXEL = ((a[1] + b[1]) / 2, (a[2] + b[2]) / 2)
+    return rig.GRASP_PIXEL
 
 
 def held(before, tol=40.0):
@@ -134,12 +250,13 @@ def held(before, tol=40.0):
     return math.dist(p, before) < tol
 
 
-def measure_jacobian(x, y, z):
+def measure_jacobian(x, y, z, see_fn=None):
     """dPixel/dMillimetre, measured by nudging the arm and watching the object slide.
 
     Beats deriving it from a calibrated camera: it costs two moves, needs no calibration,
     and it silently absorbs the arm's own inaccuracy - what we get is the mapping from
     COMMANDS to pixels, which is the mapping we actually steer with."""
+    see = see_fn or globals()["see"]
     p0 = see()
     if p0 is None:
         return None
@@ -159,12 +276,18 @@ def measure_jacobian(x, y, z):
     return J
 
 
-def servo(x, y, z, iters, tol_px, label=""):
+def servo(x, y, z, iters, tol_px, label="", see_fn=None):
     """Steer the object onto GRASP_PIXEL at height z. Returns the final (x, y), or None.
 
     The claw is rigid to the camera, so GRASP_PIXEL is the right target at ANY height -
-    which is what makes a coarse pass up high possible."""
-    J = measure_jacobian(x, y, z)
+    which is what makes a coarse pass up high possible.
+
+    see_fn overrides how the target point is found (default: see(), the blob centroid).
+    Pass tanggrab.see_centre to aim at an elongated object's MIDDLE instead - the centroid
+    drifts toward whichever end is more visible, which is what makes the jaws land near a
+    bar's edge."""
+    see = see_fn or globals()["see"]
+    J = measure_jacobian(x, y, z, see_fn=see)
     if J is None:
         return None
     prev = None
@@ -179,7 +302,7 @@ def servo(x, y, z, iters, tol_px, label=""):
         if d <= tol_px:
             return x, y
         if prev is not None and d > prev:
-            Jn = measure_jacobian(x, y, z)
+            Jn = measure_jacobian(x, y, z, see_fn=see)
             if Jn is not None:
                 J = Jn
         prev = d

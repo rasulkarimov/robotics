@@ -67,21 +67,159 @@ def wrist_for_bar(long_ang, aspect):
     return servo2, ROT_DX_90 * (a / 90.0), ROT_DY_90 * (a / 90.0)
 
 
+# Measured 2026-07-27 on this workspace, and EXTENT is the discriminator that works:
+#            area    aspect  extent  solidity
+#   bar     21377     3.45    0.78     0.84
+#   glow     9549     3.46    0.31     0.53     <- long and thin like the bar; extent kills it
+#   sockets  1905     1.71    0.70     0.90     <- solidity as HIGH as the bar's
+#   LED      1266     1.07    0.40     0.64
+# Solidity does NOT separate them (impostors reach 0.88-0.90 while the clipped bar is only
+# 0.84) - an earlier 0.90 threshold rejected the real bar and found nothing at all. Extent
+# separates cleanly at 0.75: every impostor is <= 0.70, the bar is 0.78.
+# Thresholds set from BOTH a bar view and a no-bar view, because a single frame is not
+# enough: calibrated on one frame (extent 0.78) the cut sat at 0.75, and a second, blurrier
+# view of the same bar measured 0.62 and was REJECTED - measure() then returned None while
+# see() still saw the bar, so grasp_bar aborted every attempt without even trying.
+#            area    aspect  extent  solidity
+#   bar     21377     3.45    0.78     0.84
+#   bar     27247     2.98    0.62     0.75   <- same bar, different view
+#   glow     9549     3.46    0.31     0.53
+#   sliver    797     2.94    0.43     0.58
+BAR_MIN_EXTENT = 0.50      # contour area / minAreaRect area
+BAR_MIN_SOLIDITY = 0.65    # contour area / convex-hull area
+
+
+# Mean HSV saturation inside the contour, and it is the ONE feature that separates the bar
+# from the power strip's blue glow cleanly. Shape does not: the glow is long, thin and can
+# look as bar-like as the bar itself, and thresholds tight enough to reject it also rejected
+# real bar views (measured extent 0.62-0.78 for the bar vs 0.31-0.43 for glow - overlapping
+# once blur is involved). Measured mean saturation, though:
+#     bar   112, 123      <- pencil-shaded blue, PALE
+#     LEDs  155
+#     glow  166, 227      <- an emitter, vivid
+# So the test is an UPPER bound, which is the opposite of the intuition that "the real object
+# is the more colourful one". Scene-specific: it holds because this bar is coloured in by
+# hand. A glossy, vividly-blue object would need this raised or replaced.
+BAR_MAX_SATURATION = 140
+
+
+def _mean_saturation(c):
+    import numpy as _np
+    x, y, w, h = cv2.boundingRect(c)
+    if w <= 0 or h <= 0:
+        return 255.0
+    img = _LAST_FRAME_HSV
+    if img is None:
+        return 0.0
+    mask = _np.zeros(img.shape[:2], _np.uint8)
+    cv2.drawContours(mask, [c], -1, 255, -1)
+    vals = img[:, :, 1][mask > 0]
+    return float(vals.mean()) if vals.size else 255.0
+
+
+_LAST_FRAME_HSV = None
+
+
+def _pick_bar_contour(cnts):
+    """Largest contour that is actually BAR-SHAPED, or None.
+
+    "Biggest blue blob" is not good enough here: the power strip's indicator LEDs and its
+    bluish sockets pass the hue filter and sit permanently in the workspace. Measured live
+    2026-07-27 with no bar in frame at all - blobs of 531-4444 px, aspect 1.03-1.66 - and
+    they were being measured as "the bar", which fed a garbage long_ang/aspect into
+    wrist_for_bar (whose aspect < 1.8 guard then quietly disabled the wrist rotation) and
+    sent the arm off to grasp bare floor. The bar is long; the impostors are round."""
+    best = None
+    for c in cnts:
+        a = cv2.contourArea(c)
+        if a < pe.OBJ_SHAPE_MIN_AREA:      # same bulk requirement see() uses
+            continue
+        (_, _), (w, h), _ = cv2.minAreaRect(c)
+        if max(w, h) / max(1.0, min(w, h)) < pe.OBJ_MIN_ASPECT:
+            continue
+        # SOLIDITY/EXTENT. Elongation alone is not enough: the blue GLOW that spills along
+        # the power cable is long and thin too (measured aspect 3.5-7.0 with no bar in
+        # frame). A real bar fills its bounding rectangle and is convex; a glow is diffuse
+        # and ragged. Measured on the impostors: extent 0.31-0.70, solidity 0.53-0.90.
+        if a / max(1.0, w * h) < BAR_MIN_EXTENT:
+            continue
+        hull = cv2.convexHull(c)
+        if a / max(1.0, cv2.contourArea(hull)) < BAR_MIN_SOLIDITY:
+            continue
+        if _mean_saturation(c) > BAR_MAX_SATURATION:
+            continue
+        if best is None or a > cv2.contourArea(best):
+            best = c
+    return best
+
+
 def measure(img):
     """Return (cx, cy, aspect, long_axis_deg) of the blue blob, or None.
     long_axis_deg: 0/180 = horizontal (tangential), 90 = vertical (radial)."""
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    globals()["_LAST_FRAME_HSV"] = hsv
     m = cv2.inRange(hsv, pe.OBJ_LO, pe.OBJ_HI)
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
     cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not cnts:
+    c = _pick_bar_contour(cnts)
+    if c is None:
         return None
-    c = max(cnts, key=cv2.contourArea)
     (cx, cy), (w, h), ang = cv2.minAreaRect(c)
     aspect = max(w, h) / max(1.0, min(w, h))
     long_ang = (ang if w >= h else ang + 90) % 180
     return cx, cy, aspect, long_ang
+
+
+def measure_full(img, margin=3):
+    """measure(), plus the bar's GEOMETRIC centre and whether the blob is CLIPPED by the frame.
+
+    Returns (cx, cy, aspect, long_ang, clipped) or None. cx,cy is the minAreaRect centre -
+    for a uniform bar that is its centre of mass, and it is what you want the jaws to close
+    on. The connected-component CENTROID that pick_eye.see() returns is NOT the same thing
+    once part of the bar leaves the frame: it slides toward whichever end is still visible,
+    so the jaws land near an end instead of the middle (user, watching: "иногда ты хватаешь
+    за край бруса"). Gripping an end is bad for a bar and fatal for a small USB plug, which
+    is the whole reason this matters.
+
+    `clipped` is true when the contour touches the frame border, i.e. part of the object is
+    out of view and BOTH centre estimates are untrustworthy - back off / re-centre first
+    rather than aiming at a number that cannot be right. This is also the condition behind
+    the garbage aspect readings (measured 1.32 on a visibly 4:1 bar) that silently disable
+    the wrist rotation via wrist_for_bar's aspect<1.8 guard."""
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    globals()["_LAST_FRAME_HSV"] = hsv
+    m = cv2.inRange(hsv, pe.OBJ_LO, pe.OBJ_HI)
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+    cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    c = _pick_bar_contour(cnts)
+    if c is None:
+        return None
+    (cx, cy), (w, h), ang = cv2.minAreaRect(c)
+    aspect = max(w, h) / max(1.0, min(w, h))
+    long_ang = (ang if w >= h else ang + 90) % 180
+    x, y, bw, bh = cv2.boundingRect(c)
+    H, W = m.shape[:2]
+    clipped = (x <= margin or y <= margin or x + bw >= W - margin or y + bh >= H - margin)
+    return cx, cy, aspect, long_ang, clipped
+
+
+def see_centre():
+    """pick_eye.see()-compatible probe that returns the bar's MIDDLE, not its centroid.
+
+    Returns the minAreaRect centre EVEN WHEN CLIPPED. An earlier version returned None on
+    any clipping so the loop wouldn't chase a wrong point - that was a bad trade and the
+    log says so: the bar touches the frame edge in most HIGH-pose frames, so the aim loop
+    kept treating a perfectly visible bar as lost. Success fell 4/4 -> 1/4 and reps went
+    from ~50 s to ~180 s. A clipped rect centre is still a far better target than the
+    centroid (which slides toward the visible end); `clipped` stays available from
+    measure_full() as a diagnostic and for the aspect guard."""
+    import pick
+    m = measure_full(pick.frame())
+    if m is None:
+        return None
+    return float(m[0]), float(m[1])
 
 
 R_MAX = 200.0   # raised 178->200 on 2026-07-16 with the wider pitch band (pick_eye.PITCH_BAND
@@ -98,8 +236,14 @@ R_MAX = 200.0   # raised 178->200 on 2026-07-16 with the wider pitch band (pick_
 # aspect/angle unreadable). Didn't re-derive these gains this session - if this keeps
 # happening, re-measure them fresh rather than trusting they're still right after the
 # remount, the same way rig.GRASP_Z needed re-measuring (see rig.py).
-BASE_PER_PX = 1 / 2.5
-R_PER_PX = 1 / 4.5
+# RE-MEASURED LIVE 2026-07-27 (nudge the arm, watch the blob move), and both were wrong:
+#   base: +25 units moved the blob +122 px  ->  4.9 px/unit, NOT the assumed 2.5
+#   R:    -15 mm   moved the blob -34.4 px  ->  2.29 px/mm,  NOT the assumed 4.5
+# The base gain being 2x too big made every horizontal correction OVERSHOOT, so centring
+# oscillated and walked away instead of converging (user: "почему твой поиск всегда уходит
+# слишком далеко?").
+BASE_PER_PX = 1 / 4.9
+R_PER_PX = 1 / 2.29
 
 
 def find_R(base, HIGH, lo=118, hi=200, step=8):
@@ -145,7 +289,12 @@ def center_grabframe(base, R, HIGH, tol=42, maxit=6):
         # forward arc; a real object at base~780 got clamped down to 620 every
         # correction step and was lost) - now just the arm's real servo travel limits.
         base = int(max(150, min(850, base + max(-45, min(45, (GX - p[0]) * BASE_PER_PX)))))
-        R = max(120.0, min(R_MAX, R + max(-14, min(14, (p[1] - GY) * R_PER_PX))))
+        # SIGN: increasing R moves the blob DOWN the frame (measured above), so to pull a blob
+        # that sits ABOVE the target (p[1] < GY) down onto it, R must GROW - the error term is
+        # (GY - p[1]), not (p[1] - GY). The old sign drove R the wrong way on every vertical
+        # correction, walking the object further off-frame each iteration (user: "в
+        # противоположную сторону уходишь, когда известно в какой стороне брус").
+        R = max(120.0, min(R_MAX, R + max(-14, min(14, (GY - p[1]) * R_PER_PX))))
         if grab2.pose(base, R, HIGH, 1000) is None:
             R = max(120.0, R - 8); continue
         pe.arm_step(f"1:{pe.OPEN}", 420); time.sleep(0.28)
@@ -245,6 +394,28 @@ def wiggle_held_test(log=print):
     return held, s1, s2
 
 
+def open_jaws_gently(log=print):
+    """Open the jaws only AFTER lowering to floor level, so anything still held is SET DOWN
+    instead of dropped from height.
+
+    Opening at whatever height the arm happens to be at is how a drill turns into a game of
+    fetch: the bar falls ~9 cm, bounces, and lands somewhere new, which invalidates the hint
+    and sends the next attempt hunting. The user had to say it twice - the second time as
+    "Хватит бросать брус!!!" - because the first fix only covered the failed-wiggle path and
+    missed this one, at the top of every attempt.
+
+    Works from the CURRENT pose (read back from the servos), because this runs before the
+    object has been located and there is no target x,y yet."""
+    try:
+        s3, s4, s5, s6 = (orbit.get_servo(j) for j in (3, 4, 5, 6))
+        x, y, _ = kin.fk(s5, s4, s3, s6)
+        pe.goto(x, y, rig.GRASP_Z, 1200)
+        time.sleep(0.2)
+    except Exception as e:                     # never let a tidy-up step abort the grasp
+        log(f"    [grasp_bar] could not lower before opening ({e}); opening in place")
+    pe.arm_step(f"1:{pe.OPEN}", 700)
+
+
 def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
     """The canonical end-to-end bar grasp, as proven in the 2026-07-19 drills (19/20 held
     across angles 57-158deg and reaches 130-190mm when counting the auto-retry):
@@ -261,14 +432,30 @@ def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
     if gz is not None:
         rig.GRASP_Z = gz
     HIGH = rig.GRASP_Z + 60.0
+    # Where the jaws really close, measured now - the stored constant goes stale across
+    # mountings and steers every grasp off to one side while the aim loop still reports
+    # clean convergence. One move, and it removes the whole failure mode. See rig.py.
     for attempt in range(1 + retries):
         if attempt:
             log(f"    [grasp_bar] retry {attempt}/{retries} from the same hint")
         pe.arm_step(f"2:{NEUTRAL}", 500)
-        pe.arm_step(f"1:{pe.OPEN}", 700)
+        open_jaws_gently(log=log)
         loc = orbit.locate_near(hint_base, hint_R, log=log)
         if loc is None:
             continue
+        # Measure the closing point BEFORE centring, at the located pose (already HIGH over
+        # the object). Two constraints pin it here:
+        #  - it must NOT be measured at whatever pose the arm was in on entry: that made it
+        #    swing ~100 px between reps - (252,265) (224,229) (217,314) (202,320) - and every
+        #    one of those attempts failed. The claw is only "fixed in the image" for a GIVEN
+        #    pose, so the measurement has to share the working pose.
+        #  - it must come BEFORE center_grabframe, because centring STEERS TOWARDS
+        #    rig.GRASP_PIXEL. Measuring afterwards left centring chasing the stale (170,146)
+        #    while the truth was (184,353); it drove R down to its 120 mm clamp - past the
+        #    ~140 mm floor where the jaws start catching the ultrasonic bracket - and still
+        #    ended 73 px off.
+        gp = pe.measure_grasp_pixel()
+        log(f"    [grasp_bar] closing point {'measured ' + str(tuple(round(v) for v in gp)) if gp else 'MEASURE FAILED, using stored ' + str(rig.GRASP_PIXEL)}")
         hit = center_grabframe(loc[0], loc[1], HIGH)
         if hit is None:
             continue
@@ -287,6 +474,14 @@ def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
         base_gp = rig.GRASP_PIXEL
         if rot != NEUTRAL:
             rig.GRASP_PIXEL = (base_gp[0] + aim_dx, base_gp[1] + aim_dy)
+        # Aim with the blob CENTROID (pe.see, the default). Aiming at the minAreaRect centre
+        # via see_centre was tried 2026-07-26 to stop the jaws landing near a bar's end, and
+        # it REGRESSED hard: 4/4 held -> 1/4, and reps went ~50 s -> ~200 s. Re-verified with
+        # a correct hint and a clean, fully-visible bar (aspect 6.5), so it was the aim point
+        # itself, not a stale hint or a clipped blob. The two points normally sit only ~4 px
+        # apart, so the centroid is NOT what makes a grip land off-centre - look elsewhere
+        # before retrying this. see_centre/measure_full are kept: they are the right tools for
+        # MEASURING where the grip landed (off_centre_px in train_grasp.py) and for `clipped`.
         r = pe.servo(x, y, HIGH, iters=8, tol_px=18.0, label="aim")
         rig.GRASP_PIXEL = base_gp
         if r:
@@ -303,6 +498,18 @@ def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
             return {"held": True, "shifts": (s1, s2), "long_ang": long_ang,
                     "base": base, "R": R, "x": x, "y": y, "rot": rot,
                     "attempts": attempt + 1}
+        # Put it DOWN before letting go. After a failed wiggle the arm is parked ~90 mm up,
+        # and opening the jaws there drops the bar - it bounces and skitters to a new spot,
+        # which invalidates the hint and makes the next attempt hunt for it (user, watching
+        # a drill do this repeatedly: "Хватит бросать брус. Клади аккуратно, а то отскочет").
+        # A partial grip is the common case here, so this runs on EVERY failed attempt.
+        pe.goto(x, y, rig.GRASP_Z, 1200); time.sleep(0.2)
+        pe.arm_step(f"1:{pe.OPEN}", 700); time.sleep(0.2)
+        pe.goto(x, y, rig.GRASP_Z + 60, 1200)
+        # ...and only then reset the wrist, so a caller that reads {"held": False} back
+        # doesn't inherit a rotated claw it never asked for (bit a live session 2026-07-26:
+        # the rotated jaws produced misleading frames for everything after).
+        pe.arm_step(f"2:{NEUTRAL}", 500)
     return {"held": False, "attempts": 1 + retries}
 
 
