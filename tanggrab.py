@@ -131,7 +131,7 @@ def _mean_saturation(c):
 _LAST_FRAME_HSV = None
 
 
-def _pick_bar_contour(cnts):
+def _pick_bar_contour(cnts, log=None):
     """Largest contour that is actually BAR-SHAPED, or None.
 
     "Biggest blue blob" is not good enough here: the power strip's indicator LEDs and its
@@ -139,32 +139,55 @@ def _pick_bar_contour(cnts):
     2026-07-27 with no bar in frame at all - blobs of 531-4444 px, aspect 1.03-1.66 - and
     they were being measured as "the bar", which fed a garbage long_ang/aspect into
     wrist_for_bar (whose aspect < 1.8 guard then quietly disabled the wrist rotation) and
-    sent the arm off to grasp bare floor. The bar is long; the impostors are round."""
+    sent the arm off to grasp bare floor. The bar is long; the impostors are round.
+
+    log, if given, gets ONE line for the biggest rejected candidate when nothing passes -
+    added 2026-07-27 after the saturation gate silently ate 6/6 tries with nothing in the
+    log to say why (see BAR_MAX_SATURATION note below). Without this, every rejection here
+    is indistinguishable from "no bar in frame at all" to anyone reading the log."""
     best = None
+    biggest_rejected = None   # (area, reason) for the log, when nothing qualifies
     for c in cnts:
         a = cv2.contourArea(c)
         if a < pe.OBJ_SHAPE_MIN_AREA:      # same bulk requirement see() uses
             continue
         (_, _), (w, h), _ = cv2.minAreaRect(c)
-        if max(w, h) / max(1.0, min(w, h)) < pe.OBJ_MIN_ASPECT:
+        aspect = max(w, h) / max(1.0, min(w, h))
+        if aspect < pe.OBJ_MIN_ASPECT:
+            if biggest_rejected is None or a > biggest_rejected[0]:
+                biggest_rejected = (a, f"aspect {aspect:.2f} < {pe.OBJ_MIN_ASPECT}")
             continue
         # SOLIDITY/EXTENT. Elongation alone is not enough: the blue GLOW that spills along
         # the power cable is long and thin too (measured aspect 3.5-7.0 with no bar in
         # frame). A real bar fills its bounding rectangle and is convex; a glow is diffuse
         # and ragged. Measured on the impostors: extent 0.31-0.70, solidity 0.53-0.90.
-        if a / max(1.0, w * h) < BAR_MIN_EXTENT:
+        extent = a / max(1.0, w * h)
+        if extent < BAR_MIN_EXTENT:
+            if biggest_rejected is None or a > biggest_rejected[0]:
+                biggest_rejected = (a, f"extent {extent:.2f} < {BAR_MIN_EXTENT}")
             continue
         hull = cv2.convexHull(c)
-        if a / max(1.0, cv2.contourArea(hull)) < BAR_MIN_SOLIDITY:
+        solidity = a / max(1.0, cv2.contourArea(hull))
+        if solidity < BAR_MIN_SOLIDITY:
+            if biggest_rejected is None or a > biggest_rejected[0]:
+                biggest_rejected = (a, f"solidity {solidity:.2f} < {BAR_MIN_SOLIDITY}")
             continue
-        if _mean_saturation(c) > BAR_MAX_SATURATION:
+        sat = _mean_saturation(c)
+        if sat > BAR_MAX_SATURATION:
+            if biggest_rejected is None or a > biggest_rejected[0]:
+                biggest_rejected = (a, f"saturation {sat:.1f} > {BAR_MAX_SATURATION}")
             continue
         if best is None or a > cv2.contourArea(best):
             best = c
+    if best is None and log:
+        if biggest_rejected:
+            log(f"    [measure] no bar-shaped blob: biggest candidate area={biggest_rejected[0]:.0f} rejected on {biggest_rejected[1]}")
+        else:
+            log("    [measure] no candidate blob at all (area/hue)")
     return best
 
 
-def measure(img):
+def measure(img, log=None):
     """Return (cx, cy, aspect, long_axis_deg) of the blue blob, or None.
     long_axis_deg: 0/180 = horizontal (tangential), 90 = vertical (radial)."""
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -173,7 +196,7 @@ def measure(img):
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
     cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    c = _pick_bar_contour(cnts)
+    c = _pick_bar_contour(cnts, log=log)
     if c is None:
         return None
     (cx, cy), (w, h), ang = cv2.minAreaRect(c)
@@ -182,7 +205,7 @@ def measure(img):
     return cx, cy, aspect, long_ang
 
 
-def measure_full(img, margin=3):
+def measure_full(img, margin=3, log=None):
     """measure(), plus the bar's GEOMETRIC centre and whether the blob is CLIPPED by the frame.
 
     Returns (cx, cy, aspect, long_ang, clipped) or None. cx,cy is the minAreaRect centre -
@@ -204,7 +227,7 @@ def measure_full(img, margin=3):
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
     cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    c = _pick_bar_contour(cnts)
+    c = _pick_bar_contour(cnts, log=log)
     if c is None:
         return None
     (cx, cy), (w, h), ang = cv2.minAreaRect(c)
@@ -479,7 +502,7 @@ def grasp_bar(hint_base, hint_R, gz=None, retries=1, log=print):
         base, R, _ = hit
         m = None
         for _ in range(6):
-            m = measure(pick.frame())
+            m = measure(pick.frame(), log=log)
             if m:
                 break
             time.sleep(0.2)
