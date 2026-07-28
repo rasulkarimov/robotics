@@ -76,9 +76,33 @@ FIXED_PITCH = 185.0
 PITCH_BAND = 22.0
 
 
+_last_pitch = FIXED_PITCH   # pitch actually used by the most recent goto(), for goto_vertical()
+
+
 def goto(x, y, z, ms=1200):
+    global _last_pitch
     sol = kin.ik_search(x, y, z, pitch_lo=FIXED_PITCH - PITCH_BAND,
                         pitch_hi=FIXED_PITCH + PITCH_BAND, prefer=FIXED_PITCH)
+    if not sol:
+        return False
+    _last_pitch = sol["pitch"]
+    arm_step(",".join(f"{j}:{sol[j]}" for j in (6, 5, 4, 3)), ms)
+    return True
+
+
+def goto_vertical(x, y, z, ms=1200):
+    """Like goto(), but PINS the wrist pitch to whatever goto() last used, instead of
+    letting ik_search pick freely within +-PITCH_BAND.
+
+    WHY: ik_search is free to choose a different pitch at every call, so two calls at the
+    same (x, y) but different z can come back with different wrist tilt - the wrist+camera
+    quietly leans, and the claw's real-world path is not the vertical line the commanded
+    z-only change implies (observed live 2026-07-28: the claw drifted forward on every
+    insert/lift cycle, needing a manual few-mm correction back each time). Pinning pitch to
+    one exact value removes that other degree of freedom, so a z-only change moves the claw
+    close to straight up/down. Costs some reachability at the edges of the workspace - use
+    goto() there instead."""
+    sol = kin.ik(x, y, z, _last_pitch)
     if not sol:
         return False
     arm_step(",".join(f"{j}:{sol[j]}" for j in (6, 5, 4, 3)), ms)

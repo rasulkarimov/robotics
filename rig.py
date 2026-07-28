@@ -102,6 +102,14 @@ CLAW_IS_FIXED_IN_IMAGE = True
 # 2026-07-26 and it was nowhere near this constant:
 #     (325, 342) at base=480 R=165 z=GRASP_Z+38   (USB plug pose)
 #     (392, 238) at base=326 R=165 z=GRASP_Z+60   (blue bar pose)
+#
+# REAL CHARGER USB (not the practice dummy) - confirmed grasp pose, 2026-07-28:
+#     base=478, R=165, z=GRASP_Z+33 to close on it; the object's base sits ~30mm off the
+#     floor (user-measured). Insertion/removal at this mount is VERTICAL (straight z, at
+#     this same x,y) - not by extending reach. Use pick_eye.goto_vertical() for the
+#     up/down leg once goto() has set the pitch here, or the wrist quietly leans forward
+#     on every lift/insert and needs a manual few-mm correction back (see
+#     [[real-charger-usb-session-2026-07-28]]).
 # i.e. ~220 px right and ~90 px down of (170, 146). Since the aim loop drives the object ONTO
 # this pixel, a stale value steers the object CONSISTENTLY OFF TO ONE SIDE of the real jaws -
 # the object lands under one claw and the grasp closes beside it. The failure looks like bad
