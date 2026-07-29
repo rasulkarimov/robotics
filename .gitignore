@@ -23,3 +23,4 @@ orbit_out/
 
 # Continuous telemetry (ever-growing, no reason to version)
 health_log.csv
+net_watchdog_log.csv
