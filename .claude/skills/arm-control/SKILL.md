@@ -270,3 +270,50 @@ Asked whether a plug was gripped, the user answered: "Ты можешь пров
 The wiggle test, base rotation and several camera angles are all available.
 Exhaust the robot's own senses first; escalate only after a second consecutive
 genuine failure.
+
+### The kinematics: what reaches where
+
+`kin.py` has the real model — `fk()`, `ik()`, `ik_search()`, `reachable()`,
+`max_reach()`. Constants: `BASE_HEIGHT = 67.98 mm` (base plate → shoulder axis),
+`LG = 63.6 mm` (wrist axis → grasp point), `UNITS_PER_DEG = 4.0`,
+`CENTER = 500` (servo 500 = arm straight up).
+
+**The reach envelope, computed from that model:**
+
+| height above the base plate | max reach |
+|---|---|
+| 0 mm (floor) | 251 mm |
+| 20 mm | 246 mm |
+| 40 mm | 240 mm |
+| 60 mm | 230 mm |
+| 80 mm | 218 mm |
+| 100 mm | 201 mm |
+| 120 mm | 171 mm |
+| 150 mm and above | nothing |
+
+Two consequences worth planning around. **The chassis has to park within ~25 cm
+of an object on the floor**, and closer still for anything raised — driving to
+"about right" and hoping the arm covers the rest does not work at 251 mm.
+And the envelope collapses fast with height: the last 30 mm of lift costs 30 mm
+of reach.
+
+**`ik_search` is accurate; do not blame it for a missed move.** It searches the
+approach pitch over 150-225° preferring 195° (a fixed 180° is over-constrained and
+declares perfectly reachable poses unreachable). Round-tripped 542 random
+solutions through `fk()` across R = 80-245 mm, z = -40..120: worst error
+**0.83 mm**, which is the servo quantisation floor — 1 unit = 0.25°, about
+0.87 mm of arc at R = 200. A recorded "IK returned a solution 6 mm off" from
+2026-07-31 does NOT reproduce: that exact point (R=136.74, z=-37) round-trips to
+0.08 mm. So when a small precise correction executes larger than intended, the
+cause is mechanical — the arm did not reach the commanded position under load —
+not the solver. Recompute FK from the ACTUAL servo readings after the move, which
+is the check that catches it either way.
+
+**A gotcha in the return value:** `ik_search` returns a dict keyed by servo
+NUMBER (6, 5, 4, 3) plus the string key `'pitch'`. Mixed key types, so
+`sorted(sol)` raises `TypeError: '<' not supported between instances of 'str' and
+'int'`. Index it as `sol[5]`, `sol[4]`, `sol[3]`, `sol[6]`.
+
+Servo resolution is the precision floor for everything above: 0.25° per unit is
+~0.87 mm at 200 mm reach, so no aiming loop can do better than about a
+millimetre, and asking for tenths is asking for noise.
