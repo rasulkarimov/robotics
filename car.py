@@ -403,10 +403,30 @@ def restart_camera():
     print(f"camera (mjpg-streamer) restarted on {dev}")
 
 
+SERVER_UNIT = "car-server.service"
+
+
+def _unit_exists():
+    r = subprocess.run(["systemctl", "list-unit-files", SERVER_UNIT],
+                       capture_output=True, text=True)
+    return SERVER_UNIT in r.stdout
+
+
 def restart_server():
     """Full restart of Main.py (command port + camera). Needed after the many
     spontaneous Pi reboots, or when the TCP command port is wedged (e.g. an
-    >Ultrasonic query with bad sensor wiring blocks the single-threaded loop)."""
+    >Ultrasonic query with bad sensor wiring blocks the single-threaded loop).
+
+    Main.py runs under systemd as car-server.service (installed 2026-08-29 so it
+    survives the net-watchdog's reboots). Go through systemctl when the unit is
+    there: killing the process by hand only makes systemd restart it AND leaves
+    this function's own copy running, so two servers then fight over port 12345.
+    The manual path stays for a machine where the unit was never installed."""
+    if _unit_exists():
+        subprocess.run(["sudo", "systemctl", "restart", SERVER_UNIT])
+        time.sleep(5)
+        print(f"server restarted via systemd ({SERVER_UNIT})")
+        return
     pids = subprocess.run(["pgrep", "-f", "Main.py"], capture_output=True, text=True).stdout.split()
     if pids:
         subprocess.run(["sudo", "kill", "-9", *pids])

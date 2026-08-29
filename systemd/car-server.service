@@ -1,0 +1,25 @@
+[Unit]
+Description=Freenove smart-car server (TCP command port 12345 + mjpg-streamer 8090)
+# The net-watchdog can reboot the Pi on its own; without this unit the chassis
+# and camera came back dead and stayed dead until someone noticed.
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=astra
+Group=astra
+WorkingDirectory=/home/astra/Freenove_Three-wheeled_Smart_Car_Kit_for_Raspberry_Pi/Server
+# Main.py unconditionally builds a QApplication; offscreen removes its dependency
+# on a live X display, which is why it used to fail after every reboot.
+Environment=QT_QPA_PLATFORM=offscreen
+ExecStart=/usr/bin/python Main.py -mnt
+Restart=always
+RestartSec=5
+# Main.py spawns mjpg-streamer as a child; kill the whole group on stop so a
+# stale streamer never holds port 8090 against the next start.
+KillMode=control-group
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

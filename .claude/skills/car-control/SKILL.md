@@ -31,6 +31,19 @@ running. Two independent recovery commands:
   itself is down, e.g. after a reboot; runs headless via `QT_QPA_PLATFORM=offscreen`
   so no X server is needed).
 
+**`Main.py` runs under systemd as `car-server.service`** (installed 2026-08-29;
+before that it was started by hand and did NOT survive a reboot, so the
+net-watchdog's automatic reboot could leave the chassis and camera silently dead).
+It is `enabled`, so a reboot brings it back on its own, and `Restart=always`
+covers a crash. `car.py restart-server` detects the unit and goes through
+`systemctl restart`; do the same by hand rather than killing `Main.py`, because
+systemd will immediately restart what you killed and any hand-launched copy then
+fights it for port 12345.
+
+Never `pkill -f Main.py` from a shell whose own command line contains that
+string - the pattern matches the shell itself and kills the session mid-script.
+Use `systemctl restart car-server.service`.
+
 `find_camera_device()` probes `/dev/video*` for whichever one is the real USB
 camera (it does NOT reliably stay `/dev/video0` - unplugging/replugging or a USB
 bus reset can shift it to video1, video2, etc, and several on-SoC codec/ISP video
@@ -60,6 +73,19 @@ the ultrasonic beam at all - don't expect it to "see" every obstacle a camera wo
   forward+steer one way, then backward+steer the OTHER way (both phases rotate the
   body the same rotational sense while the net translation ~cancels). See
   `kturn.py` for the pattern.
+- **Budget the turn before you plan a route.** Measured 2026-08-29: one
+  `nav.py turn left 50 55 1.0` produced **+2.4 deg**; five more at full steer
+  (angle 60, speed 60, 1.2 s) claimed +25 deg in total, and most were flagged low
+  confidence. A 90 deg change of heading is therefore *tens* of manoeuvres and a
+  real amount of battery. Plan routes as long straight legs and wide arcs, and
+  treat "just turn around and look" as expensive, not free. If the robot is
+  wedged in a corner, ask the user to move it rather than grinding K-turns.
+- **The reported heading is not yet trustworthy.** After five LEFT turns the pose
+  read +25 deg CCW, but the view matched what had been scanned at a NEGATIVE
+  bearing earlier - a sign or scale error somewhere between `turn`, `NECK_SIGN`
+  and the bearing arithmetic that is still unresolved. `nav.py turn` prints its
+  own "neither estimate is trustworthy" warning when both ORB and the tile-line
+  fallback are weak; believe that warning and confirm with a snapshot.
 - For any meaningful driven distance, camera- or ultrasonic-based verification
   beats dead reckoning - both under- and over-shooting by a lot happened this
   session trusting `drive_mm` alone on a longer leg. `car.move_verified()` (sonar
