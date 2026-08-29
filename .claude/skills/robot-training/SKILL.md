@@ -141,6 +141,38 @@ low box: the box was not in frame at the moment the jaws opened. If the target
 cannot be seen together with the jaws, back off 20 cm first and look — that is
 what finally showed where the sock had landed.
 
+## The fetch chain, with the numbers that worked
+
+Run end to end on 2026-08-29 (sock → box at the balcony door). Follow it in this
+order; every number here was measured, not assumed.
+
+1. **Look, with a named view.** `nav.py scan --view floor` for the room. For
+   something within ~30 cm, the lookout shape with a lower pitch:
+   `3:237,4:843,5:500,6:<bearing>`. Sweep the BASE, never servos 3/4.
+2. **Find the bearing by sweeping, not by reasoning.** Increasing servo 6 looks
+   LEFT. An empty frame from a 35 deg camera is not evidence of absence — move
+   and look again before concluding anything.
+3. **Descend from the pose that has the object in view.** Do NOT compute a hover
+   over "where the hand should be": the camera looks along the gripper axis and
+   sees about 79 mm BEYOND the grasp point, so that hover lands short and shows
+   bare floor. This wasted most of an hour.
+4. **Grasp.** Open (`arm.py move 1 156`), descend to `rig.GRASP_Z` = -75, close.
+   On the sock: closing to 660 stalled at 642 and it fell later; closing to 700
+   stalled at **679** and held. Squeeze past first contact on a soft object.
+5. **Verify by wiggling**, then **do not fold it home** — `arm.py home` dropped
+   the first grasp. Lift within the same pose family.
+6. **Fold the arm before driving.** An extended arm reads as an obstacle to the
+   sonar (24-29 cm of nothing).
+7. **Turn with arcs, not K-turns.** `car.py step forward 60 0.6 --steer right
+   --angle 45` ≈ 20 deg. A K-turn gave 0.1 deg the same day.
+8. **Drive gated.** Speed 55: 0.5 s ≈ 5 cm, 1.4 s ≈ 27 cm. Read clearance before
+   every step and stop at the threshold.
+9. **Get the target in frame WITH the jaws before releasing.** From 19 cm the
+   wrist camera looks over a low box. If you cannot see both, back off 20 cm and
+   look — before opening the jaws, not after.
+10. **Release past the near wall**, not over it, and to ~380-515 rather than
+    fully open.
+
 ## Places, not coordinates
 
 Dead reckoning does not survive here — a return after 10 K-turns landed somewhere

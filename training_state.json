@@ -45,22 +45,28 @@
     },
     "4": {
       "name": "pick an object off the floor",
-      "status": "first_success",
+      "status": "passed_once",
       "tally": {
         "attempts": 2,
         "held": 1
       },
-      "note": "sock grasped 2026-08-29 18:0x at R=200, bearing -72.5deg, z=-75, grip stalled 679; wiggle test passed. First attempt (grip 642) dropped it during arm.py home - do not fold a held soft object."
+      "note": "2026-08-29: sock grasped at R=200, bearing -72.5, z=-75, grip stalled 679, wiggle passed. First attempt (grip 642) dropped it during arm.py home."
     },
     "5": {
       "name": "socks into the box under the balcony door",
-      "status": "partial",
-      "note": "2026-08-29: full chain run once with a human watching - found, grasped, drove to the box in gated steps, released over the rim. Not counted toward the 3-of-5 criterion: the person check was skipped (wrist camera occupied by the held sock) and the landing was not verified by the robot."
+      "status": "passed_supervised",
+      "note": "2026-08-29: full chain run once with a human watching - found, grasped, drove in gated steps, released. The sock landed ON the near rim, not inside. The user chose to count the run as a success; recorded here as passed_supervised, NOT as the 3-of-5 criterion, because the person check was skipped (wrist camera occupied) and the landing was on the rim.",
+      "tally": {
+        "runs": 1,
+        "inside_box": 0,
+        "on_rim": 1
+      }
     },
     "6": {
       "name": "charge yourself",
       "status": "not_started"
     }
   },
-  "goal": "autonomous helper; current test errand: socks into the box under the balcony door"
+  "goal": "autonomous helper; current test errand: socks into the box under the balcony door",
+  "next": "teach Hermes the same chain: the numbers are in the arm-control and robot-training skills"
 }
