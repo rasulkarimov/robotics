@@ -1,0 +1,189 @@
+{
+  "start_position": {
+    "pose": {
+      "x": 0.0,
+      "y": 0.0,
+      "theta_deg": 0.0
+    },
+    "panorama": {
+      "-100": "/tmp/pano_cal_-100.jpg",
+      "-075": "/tmp/pano_cal_-075.jpg",
+      "-050": "/tmp/pano_cal_-050.jpg",
+      "-025": "/tmp/pano_cal_-025.jpg",
+      "+000": "/tmp/pano_cal_+000.jpg",
+      "+025": "/tmp/pano_cal_+025.jpg",
+      "+050": "/tmp/pano_cal_+050.jpg",
+      "+075": "/tmp/pano_cal_+075.jpg",
+      "+100": "/tmp/pano_cal_+100.jpg"
+    },
+    "description": "\u0421\u0442\u0430\u0440\u0442\u043e\u0432\u0430\u044f \u043f\u043e\u0437\u0438\u0446\u0438\u044f \u043f\u043e\u0441\u043b\u0435 \u043f\u0440\u043e\u0441\u044b\u043f\u0430\u043d\u0438\u044f"
+  },
+  "after_5_turns_left": {
+    "pose": {
+      "x": 0.0,
+      "y": 0.0,
+      "theta_deg": 30.0
+    },
+    "calibration_ref": "calibration_turns.json",
+    "description": "\u041f\u043e\u0441\u043b\u0435 5 K-turn \u0432\u043b\u0435\u0432\u043e \u043e\u0442 start_position",
+    "panorama": {
+      "-80": "/tmp/place_turned_-080.jpg",
+      "-40": "/tmp/place_turned_-040.jpg",
+      "+00": "/tmp/place_turned_+000.jpg",
+      "+40": "/tmp/place_turned_+040.jpg",
+      "+80": "/tmp/place_turned_+080.jpg",
+      "000": "/tmp/place_turned_center.jpg"
+    }
+  },
+  "_calibration_notes": {
+    "K_turn_per_cycle_deg": 6.0,
+    "K_turn_5_cycles_deg": 30.0,
+    "method": "estimated_from_planned_trajectory",
+    "verification_needed": "compare_keyframes_with_vision",
+    "verified_by_vision": true
+  },
+  "after_10_turns_left": {
+    "pose": {
+      "x": 0.0,
+      "y": 0.0,
+      "theta_deg": 60.0
+    },
+    "panorama": {
+      "-80": "/tmp/place_10turns_-080.jpg",
+      "-40": "/tmp/place_10turns_-040.jpg",
+      "+00": "/tmp/place_10turns_+000.jpg",
+      "+40": "/tmp/place_10turns_+040.jpg",
+      "+80": "/tmp/place_10turns_+080.jpg"
+    },
+    "description": "\u041f\u043e\u0441\u043b\u0435 10 K-turn \u0432\u043b\u0435\u0432\u043e \u043e\u0442 start_position (~60\u00b0)"
+  },
+  "_calibration_summary": {
+    "test_date": "2026-08-29",
+    "K_turn_per_cycle_deg": 6.0,
+    "K_turn_specs": {
+      "steer": 30,
+      "speed": 60,
+      "phase_duration_sec": 0.4
+    },
+    "verification": "vision_estimated_30deg_per_5_cycles",
+    "notes": [
+      "pose.json \u043d\u0435 \u043e\u0431\u043d\u043e\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u043f\u0440\u0438 step \u2014 \u043d\u0443\u0436\u0435\u043d \u0444\u0438\u043a\u0441 nav.py",
+      "\u0412\u043e\u0437\u0432\u0440\u0430\u0442 10 \u0446\u0438\u043a\u043b\u043e\u0432 \u043d\u0435 \u0442\u043e\u0447\u043d\u044b\u0439 \u2014 \u043d\u0430\u043a\u043e\u043f\u043b\u0435\u043d\u043d\u0430\u044f \u043e\u0448\u0438\u0431\u043a\u0430 \u043e\u0434\u043e\u043c\u0435\u0442\u0440\u0438\u0438",
+      "\u041a\u0443\u0440\u0441 \u043e\u0446\u0435\u043d\u0438\u0432\u0430\u0435\u0442\u0441\u044f \u0432\u0438\u0437\u0443\u0430\u043b\u044c\u043d\u043e, \u043d\u0435 \u0438\u0437 theta_deg"
+    ],
+    "next_steps": [
+      "\u0417\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u043e\u0440\u0438\u0435\u043d\u0442\u0438\u0440\u044b (\u043c\u0435\u0441\u0442\u0430) \u0432\u043c\u0435\u0441\u0442\u043e \u043a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442",
+      "\u041d\u0430\u0432\u0438\u0433\u0430\u0446\u0438\u044f \u043f\u043e \u0441\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u0438\u044e \u0432\u0438\u0434\u0430, \u043d\u0435 \u043f\u043e \u0441\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u044e \u043f\u0443\u0442\u0438"
+    ]
+  },
+  "window_spot": {
+    "pose": {
+      "x": 0.0,
+      "y": 0.0,
+      "theta_deg": 30.0
+    },
+    "views": {
+      "floor_center": "/tmp/window_view_floor_center.jpg",
+      "floor_left": "/tmp/window_view_floor_-050.jpg",
+      "floor_right": "/tmp/window_view_floor_+050.jpg",
+      "horizon_center": "/tmp/window_view_horizon_center.jpg",
+      "horizon_left": "/tmp/window_view_horizon_-050.jpg",
+      "horizon_right": "/tmp/window_view_horizon_+050.jpg"
+    },
+    "description": "\u041e\u043a\u043d\u043e \u0441\u043f\u0440\u0430\u0432\u0430, \u0434\u0438\u0432\u0430\u043d \u043f\u0435\u0440\u0435\u0434 \u0440\u043e\u0431\u043e\u0442\u043e\u043c, \u0442\u043e\u0440\u0448\u0435\u0440 \u0443 \u043e\u043a\u043d\u0430",
+    "landmarks": [
+      "window_right",
+      "sofa_front",
+      "lamp_near_window"
+    ]
+  },
+  "search_spot_1": {
+    "pose": {
+      "estimated": "moved_from_window_spot"
+    },
+    "views": {
+      "horizon_center": "/tmp/horiz_center.jpg",
+      "left": "/tmp/horiz_-40.jpg",
+      "right": "/tmp/horiz_+40.jpg",
+      "far_left": "/tmp/horiz_-80.jpg",
+      "far_right": "/tmp/horiz_+80.jpg"
+    },
+    "landmarks": [
+      "black_bag_center",
+      "sofa_right",
+      "grey_carpet"
+    ],
+    "note": "\u0412 \u043f\u0440\u043e\u0446\u0435\u0441\u0441\u0435 \u043f\u043e\u0438\u0441\u043a\u0430 \u043a\u043e\u0440\u043e\u0431\u043a\u0438"
+  },
+  "charging_spot": {
+    "pose": {
+      "estimated": "near_usb_port"
+    },
+    "views": {
+      "close": "/tmp/search2.jpg",
+      "up": "/tmp/charge_up.jpg",
+      "left": "/tmp/charge_left.jpg",
+      "right": "/tmp/charge_right.jpg"
+    },
+    "landmarks": [
+      "usb_contacts_closeup",
+      "black_bag_nearby"
+    ],
+    "note": "USB-\u043a\u043e\u043d\u0442\u0430\u043a\u0442\u044b \u0432\u0438\u0434\u043d\u044b \u043a\u0440\u0443\u043f\u043d\u043e \u2014 \u0437\u0430\u0440\u044f\u0434\u043a\u0430 \u0440\u044f\u0434\u043e\u043c"
+  },
+  "_search_summary": {
+    "mission": "\u041f\u043e\u0438\u0441\u043a \u043a\u043e\u0440\u043e\u0431\u043a\u0438 \u0434\u043b\u044f \u043d\u043e\u0441\u043a\u043e\u0432 \u0438 \u0437\u0430\u0440\u044f\u0434\u043a\u0438",
+    "places_recorded": [
+      "window_spot",
+      "search_spot_1",
+      "charging_spot"
+    ],
+    "findings": {
+      "box_for_socks": "NOT_FOUND",
+      "charging_station": "FOUND (USB contacts visible)",
+      "window": "CONFIRMED",
+      "sofa": "CONFIRMED"
+    },
+    "next_actions": [
+      "\u041a\u043e\u0440\u043e\u0431\u043a\u0430 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u0430 \u2014 \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e \u0432 \u0434\u0440\u0443\u0433\u043e\u0439 \u0447\u0430\u0441\u0442\u0438 \u043a\u043e\u043c\u043d\u0430\u0442\u044b",
+      "\u0417\u0430\u0440\u044f\u0434\u043a\u0430 \u043b\u043e\u043a\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u0430, \u043c\u043e\u0436\u043d\u043e \u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0441\u0442\u044b\u043a\u043e\u0432\u043a\u0443"
+    ]
+  },
+  "box_spot": {
+    "pose": {
+      "estimated": "balcony_door_area"
+    },
+    "views": {
+      "center": "/tmp/balcony_view.jpg",
+      "left_door": "/tmp/balc_-100.jpg",
+      "right_box": "/tmp/balc_+100.jpg",
+      "closeup": "/tmp/box_closeup.jpg"
+    },
+    "landmarks": [
+      "balcony_door_left",
+      "box_on_floor_right",
+      "grey_sofa"
+    ],
+    "description": "\u0411\u0435\u043b\u0430\u044f \u043a\u043e\u0440\u043e\u0431\u043a\u0430 \u043f\u043e\u0434 \u0431\u0435\u043b\u044b\u043c \u0441\u0442\u0443\u043b\u043e\u043c \u0443 \u0441\u0442\u0435\u043d\u044b, ~1.5-2\u043c \u043e\u0442 \u0440\u043e\u0431\u043e\u0442\u0430",
+    "task": "\u0412\u0437\u044f\u0442\u044c \u043d\u043e\u0441\u043e\u043a \u0438 \u043f\u043e\u043b\u043e\u0436\u0438\u0442\u044c \u0432 \u044d\u0442\u0443 \u043a\u043e\u0440\u043e\u0431\u043a\u0443",
+    "box_details": {
+      "color": "white/light grey",
+      "size": "~30-40cm, flat",
+      "location": "under white chair, near wall",
+      "distance_estimate_m": 1.5,
+      "nearby": "black cable going up the wall"
+    }
+  },
+  "_session_summary": {
+    "date": "2026-08-29",
+    "places_recorded": 7,
+    "calibration": "K-turn ~6\u00b0 per cycle",
+    "key_findings": {
+      "window_spot": "\u043e\u043a\u043d\u043e + \u0434\u0438\u0432\u0430\u043d + \u0442\u043e\u0440\u0448\u0435\u0440",
+      "charging_spot": "USB-\u043a\u043e\u043d\u0442\u0430\u043a\u0442\u044b, \u0437\u0430\u0440\u044f\u0434\u043a\u0430 \u0440\u044f\u0434\u043e\u043c",
+      "box_spot": "\u041a\u041e\u0420\u041e\u0411\u041a\u0410 \u041d\u0410\u0419\u0414\u0415\u041d\u0410 \u2014 \u0431\u0435\u043b\u0430\u044f, \u043f\u043e\u0434 \u0441\u0442\u0443\u043b\u043e\u043c \u0443 \u0441\u0442\u0435\u043d\u044b"
+    },
+    "next_task": "\u0421\u0442\u0443\u043f\u0435\u043d\u044c 5: \u043d\u043e\u0441\u043a\u0438 \u0432 \u043a\u043e\u0440\u043e\u0431\u043a\u0443 (\u043d\u0430\u0439\u0442\u0438, \u0434\u043e\u0435\u0445\u0430\u0442\u044c, \u0432\u0437\u044f\u0442\u044c, \u043f\u043e\u043b\u043e\u0436\u0438\u0442\u044c)",
+    "blockers": "\u0427\u0435\u043b\u043e\u0432\u0435\u043a \u0432 \u043a\u0430\u0434\u0440\u0435 \u2014 \u043e\u0436\u0438\u0434\u0430\u0442\u044c \u0438\u043b\u0438 \u043a\u043e\u043e\u0440\u0434\u0438\u043d\u0438\u0440\u043e\u0432\u0430\u0442\u044c"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "test_date": "2026-08-29",
+  "method": "K_turn_left_30deg",
+  "params": {
+    "steer": 30,
+    "speed": 60,
+    "phase_duration": 0.4
+  },
+  "measurements": [
+    {
+      "turn_num": 1,
+      "theta_before": 0.0,
+      "theta_accumulated": 4.8,
+      "calc_expected_delta": 4.8,
+      "file_before": "/tmp/cal_0_before.jpg",
+      "file_after": "/tmp/cal_0_after.jpg"
+    },
+    {
+      "turn_num": 2,
+      "theta_before": 4.8,
+      "theta_accumulated": 9.6,
+      "calc_expected_delta": 4.8,
+      "file_before": "/tmp/cal_1_before.jpg",
+      "file_after": "/tmp/cal_1_after.jpg"
+    },
+    {
+      "turn_num": 3,
+      "theta_before": 9.6,
+      "theta_accumulated": 14.399999999999999,
+      "calc_expected_delta": 4.8,
+      "file_before": "/tmp/cal_2_before.jpg",
+      "file_after": "/tmp/cal_2_after.jpg"
+    },
+    {
+      "turn_num": 4,
+      "theta_before": 14.399999999999999,
+      "theta_accumulated": 19.2,
+      "calc_expected_delta": 4.8,
+      "file_before": "/tmp/cal_3_before.jpg",
+      "file_after": "/tmp/cal_3_after.jpg"
+    },
+    {
+      "turn_num": 5,
+      "theta_before": 19.2,
+      "theta_accumulated": 24.0,
+      "calc_expected_delta": 4.8,
+      "file_before": "/tmp/cal_4_before.jpg",
+      "file_after": "/tmp/cal_4_after.jpg"
+    }
+  ],
+  "estimated_real_turn_per_cycle": null,
+  "estimated_turn_after_5": null,
+  "estimated_real_turn_5_cycles_deg": 30.0,
+  "estimated_turn_per_cycle_deg": 6.0,
+  "verification_method": "vision_comparison_furniture_position"
+}

@@ -1,0 +1,12 @@
+{
+  "method": "K-turn",
+  "steer_angle": 30,
+  "speed": 60,
+  "duration": 0.4,
+  "pose_after_5_turns": {
+    "expected": 24.0,
+    "measured_by_pose": 0.0,
+    "measured_by_vision": "in_progress"
+  },
+  "notes": "pose.json \u043d\u0435 \u043e\u0431\u043d\u043e\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u2014 \u043d\u0443\u0436\u0435\u043d \u0444\u0438\u043a\u0441 \u0432 nav.py \u0438\u043b\u0438 \u0440\u0443\u0447\u043d\u043e\u0439 \u0440\u0430\u0441\u0447\u0435\u0442"
+}

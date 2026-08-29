@@ -1,0 +1,52 @@
+{
+  "current_step": 2,
+  "updated": "2026-08-29",
+  "steps": {
+    "0": {
+      "name": "wake and report",
+      "status": "passed",
+      "evidence": "Hermes ran the AGENTS.md wake-up unprompted after the 2026-08-29 reboot"
+    },
+    "1": {
+      "name": "find an object in a frame",
+      "status": "partial",
+      "tally": {
+        "correct": 0,
+        "attempts": 0,
+        "false_positives": 0
+      },
+      "note": "vision.py answered 2/2 negative cases correctly on 2026-08-29, but the 10-frame set has not been run as a scored test"
+    },
+    "2": {
+      "name": "turn a commanded angle",
+      "status": "in_progress",
+      "tally": {
+        "attempts": 0,
+        "within_15deg": 0
+      },
+      "blocker": "heading sign/scale disagree: +25deg CCW claimed after five left K-turns, view matched a negative bearing. One K-turn measured 2.4deg."
+    },
+    "3": {
+      "name": "drive to a named place",
+      "status": "not_started",
+      "first_places": [
+        "balcony-door box",
+        "sofa",
+        "charger"
+      ]
+    },
+    "4": {
+      "name": "pick an object off the floor",
+      "status": "not_started"
+    },
+    "5": {
+      "name": "socks into the box under the balcony door",
+      "status": "not_started"
+    },
+    "6": {
+      "name": "charge yourself",
+      "status": "not_started"
+    }
+  },
+  "goal": "autonomous helper; current test errand: socks into the box under the balcony door"
+}

@@ -1,0 +1,124 @@
+---
+name: robot-training
+description: The training ladder Astra works through on its own - one checkable step at a time, with the hard limits that must stop it. Use at the start of every autonomous training run, before deciding what to practise, and whenever a step's criterion is being judged met or failed.
+---
+
+# Training ladder
+
+You are the operator. Nobody is watching each run. Work ONE step at a time, prove
+it with a criterion, write the result down, and stop when a limit says stop.
+
+The ladder exists because the first errand ("fetch socks, put them in the box")
+failed and nobody could say which of its four stages broke.
+
+**The current test errand is: socks into the box under the BALCONY DOOR.** That
+box is the target for step 5, and it is the place worth recording first under
+step 3 - not the window. The point of the whole exercise is an assistant that
+finishes an errand on its own. Each step below is a
+stage isolated so a failure names itself.
+
+## The one rule that outranks everything
+
+**No chassis motion without a passed preflight.**
+
+    python3 safety.py preflight drive     # before driving
+    python3 safety.py preflight turn      # before a K-turn (needs more room)
+
+Exit 0 = go. Exit 1 = BLOCKED. **Exit 2 = UNKNOWN, which means a sensor did not
+answer — treat it exactly like BLOCKED.** A check that crashed is not permission.
+Re-run the preflight after anything that could have changed the world: a person
+walking through, a completed drive, more than ~2 minutes elapsed.
+
+`safety.py` enforces, in code: battery return/stop thresholds, forward clearance,
+and "is a person in frame". It writes every verdict to `safety_log.csv`.
+
+## Current position on the ladder
+
+`training_state.json` holds `current_step` and the tally so far. Read it first,
+write it last. Do not skip ahead: a step whose criterion is unmet is where the
+next failure will come from.
+
+| # | Step | Criterion |
+|---|------|-----------|
+| 0 | Wake and report | diagnostics + short report. **Already passing.** |
+| 1 | Find an object in a frame, say where | 8 of 10 correct, and **zero** inventions on frames that have no object |
+| 2 | Turn a commanded angle | error under 15 deg, five attempts in a row |
+| 3 | Drive to a named place | 5 of 5 arrivals within 30 cm |
+| 4 | Pick an object off the floor | 4 of 5 held, judged by the wiggle test |
+| 5 | Socks into the box **under the balcony door**, end to end | 3 full runs out of 5, no human hands |
+| 6 | Charge yourself | 5 of 5 docks from anywhere in the room |
+
+Step 2 is the real blocker and the hardest: one K-turn measured **2.4 deg**, and
+after five left turns the pose claimed +25 deg CCW while the view matched a
+NEGATIVE bearing — the heading sign or scale is wrong somewhere between `turn`,
+`NECK_SIGN` and the bearing math. Do not paper over this with an averaged fudge
+factor. Find the sign first, then build the table.
+
+## How to practise step 2 (heading calibration)
+
+1. Preflight `turn`. If BLOCKED for clearance, say so and stop — this step needs
+   real floor space and the room may simply not have it today.
+2. Put a fixed reference in view (the tile seams work; they are documented in
+   `AGENTS.md`) and snapshot before.
+3. Command ONE known manoeuvre. One. Not five.
+4. Snapshot after and measure the actual rotation two ways: the tile seams, and
+   `vision.py` on the before/after pair.
+5. Record steer, speed, duration, commanded, measured, and the SIGN into
+   `turn_table.csv`.
+6. Only once one manoeuvre is understood, vary one parameter at a time.
+
+If the chassis physically cannot exceed ~10 deg per manoeuvre, that is a finding,
+not a failure: record it, and plan routes as long arcs instead of spot turns.
+
+## Places, not coordinates
+
+Dead reckoning does not survive here — a return after 10 K-turns landed somewhere
+else entirely. Record `places.json` entries: a name, a panorama taken with
+`nav.py scan --view horizon`, and arrive by matching the current view to the
+stored one. That routes around the missing odometry rather than fighting it.
+
+## Limits that are not negotiable
+
+- **A person in frame stops everything.** Stop, wait, re-shoot, re-preflight.
+  A hand appeared in frame during motion on 2026-08-29; this is not theoretical.
+- **Do not grasp anything off the whitelist.** This is a workshop: soldering
+  iron, power strip, cables, other people's chargers are REPORTED, never picked
+  up. Unsure means do not touch.
+- **Never drive blind.** At most 400 mm between two looks at the world.
+- **Battery reserve.** Below 6.9 V abort the errand and head for the charger;
+  below 6.8 V stop moving. The return threshold is deliberately above the alarm
+  so there is charge left to reach the charger with. One pack feeds the Pi too,
+  so a sag reboots the whole robot mid-motion.
+- **Geofence: this room.** The hallway and kitchen are visible but off limits
+  without explicit permission.
+- **Every autonomous action gets a log line.** Autonomy without a post-mortem
+  does not improve.
+
+## Writing results down
+
+Append one row per attempt to `training_log.csv`:
+
+    ts, step, what_was_tried, measured, verdict(pass/fail/blocked), note
+
+Then update `training_state.json`. A step is only "passed" when its criterion is
+met by the tally in that file — not by a good feeling about the last run.
+
+## When you are stuck
+
+Stop and write it down; do not improvise around a hard limit or invent a number
+to make a criterion pass. A blocked run that is honestly logged is more useful to
+the lead reviewer than a run that "worked" for reasons nobody can reconstruct.
+Say plainly which of the four stages broke.
+
+## What already works - do not rebuild it
+
+- `vision.py` — general object finding (`find` needs ~3500 tokens, ~60 s per
+  call; a 5-bearing sweep costs 5 minutes of motor and battery). See the
+  `vision` skill.
+- `nav.py lookout --view horizon|floor|deck` — 780 for furniture and doorways,
+  735 for objects on the floor, 682 for the deck.
+- `pick_eye.py` — the Jacobian servo loop. Vision gives the first aim point, this
+  finishes the approach. Never go straight from a vision cell into a grasp.
+- `usb-charging` skill — the plug transfer, with its measured poses.
+- Grasp lore lives in the `arm-control` skill: measure the closing point live,
+  wiggle to verify, and open the jaws BEFORE withdrawing.
