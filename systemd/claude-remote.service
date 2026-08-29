@@ -1,0 +1,27 @@
+[Unit]
+Description=Claude Code Remote Control session (astra-robotics)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/astra/robotics
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/home/astra/.local/bin
+Environment=TERM=xterm-256color
+# network-online.target only proves wifi L2 association here, not real
+# internet (see internet-down-wifi-connected-hang memory) -- this refuses
+# to start into a hang; combined with Restart=on-failure it retries every
+# RestartSec until there's really a route out.
+ExecStartPre=/usr/bin/python3 /home/astra/robotics/wait_for_internet_gate.py
+# `script` allocates the pty the interactive TUI needs -- systemd gives us none.
+# Transcript goes to a real file (append) instead of /dev/null so a stuck
+# session can be diagnosed from its own log instead of process/socket archaeology.
+# The command itself lives in a script under the repo: it pins the session id so
+# a restart resumes the same conversation instead of waking up with no context,
+# rotates that transcript, and falls back to a fresh session if the resume fails.
+ExecStart=/usr/bin/script -qaec /home/astra/robotics/systemd/claude-remote-run.sh /home/astra/robotics/claude_remote_transcript.log
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

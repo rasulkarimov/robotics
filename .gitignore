@@ -24,3 +24,9 @@ orbit_out/
 # Continuous telemetry (ever-growing, no reason to version)
 health_log.csv
 net_watchdog_log.csv
+
+# Preflight verdicts: one row per safety check, several per training run
+safety_log.csv
+
+# Dead-reckoned pose, rewritten on every move
+nav_state/pose.json
