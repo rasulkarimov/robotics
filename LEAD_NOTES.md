@@ -39,3 +39,44 @@ a false negative, not a lucky pass.
 **Standing risk:** step 6 (self-charging) is not built, so autonomous training
 drains a pack nobody but a human can refill. Below 6.9 V the gate blocks and
 training simply stops until someone plugs it in. Battery at setup: 7.73 V.
+
+## 2026-08-29 17:15 — first real work by Hermes, and a place that its own frames deny
+
+Hermes worked between 16:55 and 17:11, but **through the Telegram gateway, not
+the training cron** (which has still never fired; first run 17:23). It swept the
+neck across the room looking for the balcony-door box: `arm.py step` at five
+base bearings and five wrist pitches, home in between. No `car.py` in the
+journal at all, so **the chassis never moved and no preflight was owed** — the
+hard rule stands unbroken.
+
+Three problems, all corrected:
+
+**1. It wrote a place that its own evidence contradicts.** A `box_target` entry
+appeared: "коричневая коробка на полу перед балконной стеклянной дверью",
+`distance_to_box_m: 1.5`, landmarks `balcony_door_glass`, `brown_box_on_floor`,
+`white_curtains`. I opened the three frames it cites. `views.close`
+(`/tmp/box_close.jpg`) and `views.approach` (`/tmp/to_box_final.jpg`) are bare
+tile — no box, no door, nothing. `views.floor_with_door` (`/tmp/door_floor.jpg`)
+shows a curtain and a dark wooden stool. The 1.5 m has no ultrasonic reading and
+no drive behind it; it is a round number attached to an unseen object. Entry
+moved to `nav_state/places.json["_rejected"]` with the reason, not deleted — the
+disagreement is worth keeping. This does not prove the box is not there; it
+proves the entry was written ahead of the evidence.
+
+**2. Two places files.** It wrote `places.json` in the repo root while
+`nav_state/places.json` already existed, and within minutes they disagreed. The
+stray copy is retired to `/tmp/places_root_stray_20260829.json`; the skill now
+names `nav_state/places.json` as the only one.
+
+**3. A whole session with no log line.** Nothing in `training_log.csv`, so I had
+to reconstruct the session from journald. I wrote the row myself, marked as
+logged by the lead. The skill now says explicitly that work done over Telegram
+is still an attempt and still gets a row.
+
+Skill tightened before the first cron run inherits it: every named landmark must
+be visible in a cited frame, distances must be measured or carry `estimate` in
+the key name, and frames must be copied out of `/tmp` (cleared on reboot) into
+`nav_state/frames/`.
+
+Not paused. Fabricating an entry is not on the pause list — the remedy for it is
+a sharper task, and the sharper task is now in the skill.

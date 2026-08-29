@@ -1,1 +1,2 @@
 ts,step,what_was_tried,measured,verdict,note
+2026-08-29T17:15:37,3,"scout the balcony-door box with neck sweeps (no chassis motion)","none - no ultrasonic reading, chassis never moved",fail,"logged by the lead, not by the operator: places entry box_target claimed a brown box at 1.5 m but its own cited frames show bare tile; entry moved to _rejected"

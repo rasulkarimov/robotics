@@ -73,9 +73,26 @@ not a failure: record it, and plan routes as long arcs instead of spot turns.
 ## Places, not coordinates
 
 Dead reckoning does not survive here — a return after 10 K-turns landed somewhere
-else entirely. Record `places.json` entries: a name, a panorama taken with
-`nav.py scan --view horizon`, and arrive by matching the current view to the
+else entirely. Record places and arrive by matching the current view to the
 stored one. That routes around the missing odometry rather than fighting it.
+
+**The file is `nav_state/places.json`, and only that one.** A second copy was
+written to the repo root on 2026-08-29 and the two immediately disagreed; the
+next run would have read whichever one it happened to open.
+
+**A place is only recorded if its own frames prove it.** Before you write an
+entry:
+
+- Every landmark you name must be VISIBLE in a frame you cite. Do not name
+  `brown_box_on_floor` in an entry whose frames show bare tile.
+- Any distance must come from a reading (`safety.py clearance`, ultrasonic) or
+  be written as `distance_estimate_m` with the word estimate in the key. A round
+  number with nothing behind it is the thing the reviewer looks for first.
+- Copy the frames out of `/tmp` into `nav_state/frames/`. `/tmp` is cleared on
+  reboot, and an entry whose evidence has evaporated cannot be checked.
+- If you looked and did not find the thing, that is a perfectly good result:
+  write it in `training_log.csv` and record no place. An entry that claims more
+  than the frames show is worse than no entry, because the next run trusts it.
 
 ## Limits that are not negotiable
 
@@ -96,7 +113,11 @@ stored one. That routes around the missing odometry rather than fighting it.
 
 ## Writing results down
 
-Append one row per attempt to `training_log.csv`:
+Append one row per attempt to `training_log.csv` — including the attempts that
+found nothing, and including work done outside a cron run (a scout over Telegram
+is still an attempt). On 2026-08-29 a full scouting session left no row at all
+and the lead had to reconstruct it from the journal.
+
 
     ts, step, what_was_tried, measured, verdict(pass/fail/blocked), note
 
