@@ -304,3 +304,33 @@ one of those was an hour lost by me first.
 
 Battery **7.12 V** and falling — the return threshold is 6.9 and there is still no
 self-charging. A manual charge is due before the next long run.
+
+## 2026-08-30 00:08 — an unplanned reboot, and this morning's two fixes both paid out
+
+The Pi rebooted at **00:04**, unattended. Nobody asked for it; `net_watchdog`
+logged `hang_detected` at 00:05:34 and `recovered ... was_down_for=30s` at
+00:06:04, so the network wedged during boot and the watchdog rode it out.
+
+Both of this morning's systemd changes were tested for real, by accident:
+
+- **The remote session came back with its context.** `claude-remote.service`
+  restarted at 00:06:04 and the conversation resumed intact — the `--resume` pin
+  in `systemd/claude-remote-run.sh` doing exactly the job it was written for. The
+  transcript rotation fired at the same time (the log had passed 20 MB) and left
+  `claude_remote_transcript.log.1`, which the `*.log` ignore rule did not cover;
+  added `claude_remote_transcript.log.*`.
+- **The chassis server came back on its own**, which before today would have
+  left the robot dead until someone noticed.
+
+**But the recovery is only half a recovery: the camera did not come back.**
+`car-server.service` restored `Main.py` and port 12345, while port 8090 answered
+`Connection refused`. The unit restarts the server process; it does not verify
+that the `mjpg-streamer` it spawns actually bound its port. `car.py
+restart-camera` fixed it in one call.
+
+That is a real gap in the morning's fix, and worth closing properly: the unit
+should either check 8090 after start, or something should watch it, otherwise
+"the robot survived a reboot" quietly means "the robot survived a reboot but is
+blind". Filed here rather than patched now, at midnight, with training paused.
+
+Battery reads **7.753 V**, up from 7.107 — it has been on the charger.

@@ -30,3 +30,6 @@ safety_log.csv
 
 # Dead-reckoned pose, rewritten on every move
 nav_state/pose.json
+
+# rotated pty transcript (the *.log rule does not cover .log.1)
+claude_remote_transcript.log.*
