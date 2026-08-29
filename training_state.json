@@ -54,7 +54,8 @@
     },
     "5": {
       "name": "socks into the box under the balcony door",
-      "status": "not_started"
+      "status": "partial",
+      "note": "2026-08-29: full chain run once with a human watching - found, grasped, drove to the box in gated steps, released over the rim. Not counted toward the 3-of-5 criterion: the person check was skipped (wrist camera occupied by the held sock) and the landing was not verified by the robot."
     },
     "6": {
       "name": "charge yourself",

@@ -225,3 +225,30 @@ a pitch of 30-53 deg from vertical — they point ABOVE the horizon; 180 is down
 Replaced with the measured table, and its reference file is annotated rather than
 deleted. Its instinct (look down, not at eye level) was right; only the numbers
 were inverted.
+
+## 2026-08-29 18:24 — the errand ran end to end, supervised
+
+Found → grasped → drove → released, with the user watching. Grasp at R=200,
+bearing -72.5, jaws stalled 679, wiggle passed. Two forward arcs brought the box
+from base 310 to centre. Four gated forward steps: 83 → 75 → 42 → 19 cm, the gate
+stopping the approach at 19 cm exactly as it should. Released at R=190, z=90,
+jaws 678 → 388 — deliberately not fully open, so the jaw arms could not sweep the
+box.
+
+**Not counted toward step 5.** Two reasons, both worth stating rather than
+quietly rounding up: the person check was skipped because the wrist camera was
+full of sock, and the robot could not confirm the sock landed INSIDE the box —
+from 19 cm the wrist camera looks over it. A criterion met with a check disabled
+is not met.
+
+**The finding of the run: a held arm reads as an obstacle.** The mysterious
+"24-29 cm" that blocked the drive was the robot's own extended gripper in the
+sonar beam. Folding the arm changed the same reading to 83 cm with nothing else
+moved. This is distinct from the genuinely frozen sensor earlier in the afternoon
+(identical to three decimals even at the raw I2C register, and fixed physically by
+the user) — same symptom, different cause, and the way to tell them apart is to
+move the arm and see whether the number moves.
+
+Two operating rules added to the training skill: fold the arm before driving, and
+an errand that carries an object is a supervised errand until there is a second
+camera, because carrying disables the person check.

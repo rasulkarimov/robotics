@@ -38,6 +38,19 @@ The person check costs about a minute, which is the real reason to be tempted.
 That cost is the point: it is what makes an unattended robot safe to leave
 moving, and it caps how fast a calibration series can run.
 
+**Fold the arm before you drive.** An extended arm sits in the ultrasonic's beam
+and the gate then measures the robot's own gripper instead of the room. On
+2026-08-29 this read a steady 24-29 cm and blocked the drive; folding the arm to
+the lookout shape changed the same reading to 83 cm with nothing else moved. A
+held object makes it worse, because the sock is exactly what the beam hits.
+Suspect it whenever clearance is oddly constant and oddly close.
+
+**The gate's person check needs the wrist camera, which a held object blocks.**
+Carrying something therefore disables the one check that protects a person. Until
+there is a second camera, an errand that carries an object is a supervised
+errand: a run with `--skip-human` does not count toward any criterion, and the
+log line has to say a human was watching.
+
 `safety.py` enforces, in code: battery return/stop thresholds, forward clearance,
 and "is a person in frame". It writes every verdict to `safety_log.csv`.
 
