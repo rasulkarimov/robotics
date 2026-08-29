@@ -277,3 +277,30 @@ Backing up is not exempt: the sonar faces forward, so reverse is the direction
 with no sensor at all. Recorded in `training_log.csv` as VIOLATION rather than
 quietly left out, because a lead that logs the operator's breaches and not its
 own is not running a standard, it is running a double one.
+
+## 2026-08-29 19:05 — Hermes grasped it, and the report survives checking
+
+Handed Hermes the sock the user had placed 45 deg to the right, as a fresh `-z`
+session so it would load today's rewritten skills instead of the stale copies in
+its running context. Task: find and grasp, no chassis motion.
+
+**It worked, first attempt.** Found the sock at base 290 — the bearing the hint
+predicted — descended from the pose that had it in view rather than computing a
+hover, closed to 700 and stalled at **676**, wiggle test passed.
+
+**Verified rather than believed**, which is the point of this role:
+
+- Forward kinematics of the descent pose it reported (`3:189,4:644,5:175,6:290`)
+  gives R=153.7 mm, z=-74.8 mm against its reported R~154, z=-75. Not invented.
+- Gripper reads 678 now, the same value a held sock gave this afternoon.
+- Took my own frame from a fresh pose: the sock is between the jaws, clear of the
+  floor.
+
+This is the first Hermes result today that needed no correction. The difference
+from the morning is not the model — it is that the skill now carries the chain in
+order, with the traps named: that `arm.py step` needs a path argument, that the
+camera sees 79 mm beyond the hand, that 642 drops a sock and 679 holds it. Every
+one of those was an hour lost by me first.
+
+Battery **7.12 V** and falling — the return threshold is 6.9 and there is still no
+self-charging. A manual charge is due before the next long run.

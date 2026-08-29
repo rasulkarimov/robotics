@@ -7,3 +7,4 @@ ts,step,what_was_tried,measured,verdict,note
 2026-08-29T18:24:55,5,"deliver the held sock to the balcony-door box: 2 arcs + 4 forward steps + release over the rim","clearance 83->75->42->19cm, gate stopped at 19cm; released at R=190 z=90 base 470, jaws 678->388",partial,"sock released at the box; whether it landed INSIDE could not be confirmed from the wrist camera at 19cm - it looks over the box. Human confirmation pending."
 2026-08-29T18:35:47,5,"verify the drop from 20cm back","sock landed ON the near rim of the box, part hanging inside, part outside",fail,"release point was over the edge, not past it; the plan assumption that a box needs no precision is wrong for a soft object on a rim"
 2026-08-29T18:35:47,VIOLATION,my own,"backward 55/1.0s (19->39cm) run with NO safety.py preflight - lead broke the rule it paused Hermes for"
+2026-08-29 19:05:38, 4, sock_grasp_right_45deg, base=290/R=154/z=-75/stall=676, pass, wiggle_test_passed_norim

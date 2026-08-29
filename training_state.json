@@ -45,12 +45,12 @@
     },
     "4": {
       "name": "pick an object off the floor",
-      "status": "passed_once",
+      "status": "in_progress",
       "tally": {
-        "attempts": 2,
-        "held": 1
+        "attempts": 3,
+        "held": 2
       },
-      "note": "2026-08-29: sock grasped at R=200, bearing -72.5, z=-75, grip stalled 679, wiggle passed. First attempt (grip 642) dropped it during arm.py home."
+      "note": "2026-08-29: sock grasped at R=200, bearing -72.5, z=-75, grip stalled 679, wiggle passed. First attempt (grip 642) dropped it during arm.py home. 2026-08-29 19:05, HERMES first verified autonomous grasp: base 290 (sock at 45 deg right), descent pose 3:189,4:644,5:175,6:290 (FK checks out at R=153.7, z=-74.8), stall 676, wiggle passed, lead confirmed the sock in the jaws from a fresh frame. Criterion needs 4 of 5."
     },
     "5": {
       "name": "socks into the box under the balcony door",
