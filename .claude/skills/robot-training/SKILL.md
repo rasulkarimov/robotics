@@ -67,7 +67,7 @@ next failure will come from.
 | 2 | Turn a commanded angle | error under 15 deg, five attempts in a row |
 | 3 | Drive to a named place | 5 of 5 arrivals within 30 cm |
 | 4 | Pick an object off the floor | 4 of 5 held, judged by the wiggle test |
-| 5 | Socks into the box **under the balcony door**, end to end | 3 full runs out of 5, no human hands |
+| 5 | Socks into the box **under the balcony door**, end to end | 3 full runs out of 5, no human hands. **Inside the box, verified** — on the rim does not count |
 | 6 | Charge yourself | 5 of 5 docks from anywhere in the room |
 
 Step 2 is the real blocker and the hardest: one K-turn measured **2.4 deg**, and
@@ -126,6 +126,20 @@ the hand 305 mm out at 81 mm high, past what the arm can hold at that height, at
 the worst possible gravity lever — on a battery shared with the Pi. The named
 views keep it folded at 50-106 mm and move only the wrist. See the arm-control
 skill, "Do not guess joint triplets to aim the camera".
+
+## Releasing into a box: over the edge is NOT enough
+
+The plan says a box needs no precise seating, just open the jaws over the edge.
+That is half right and it cost a run on 2026-08-29: released at R=190 over the
+box's near rim, the sock landed ON the rim, half in and half out.
+
+A rim is not an interior. Aim the release point **past** the near wall — 20-30 mm
+further out, or drive 5-10 cm closer — so that what falls, falls inside.
+
+And verify before releasing, not after. From 19 cm the wrist camera looks OVER a
+low box: the box was not in frame at the moment the jaws opened. If the target
+cannot be seen together with the jaws, back off 20 cm first and look — that is
+what finally showed where the sock had landed.
 
 ## Places, not coordinates
 
