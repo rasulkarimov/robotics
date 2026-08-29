@@ -185,3 +185,43 @@ moving is what step 2 has not earned yet.
 
 Battery 7.73 → 7.33 V over the afternoon. Return threshold is 6.9 and there is no
 self-charging (step 6), so a manual charge is coming before it becomes a limit.
+
+## 2026-08-29 18:15 — the sock is in the jaws; arcs turn where K-turns do not
+
+Working the errand directly with the user watching. Three things worth keeping.
+
+**The sock is held.** Grasped at R=200 mm, bearing -72.5 deg, descended to
+z=-75, jaws stalled at **679**, wiggle test passed (base rotated 60 units, the
+sock stayed with the camera). A first attempt stalled at 642 and the sock fell
+during `arm.py home` — do not fold a held soft object; lift in the same pose
+family instead.
+
+**Two of my own errors, both worth the skill entries they produced:**
+
+1. `arm.py step` takes a REQUIRED `path` argument. Every gripper command I sent
+   without one (`step 1:156`, `step 1:640`) died in argument parsing, and I was
+   redirecting stderr to /dev/null, so the jaws never moved while I believed I
+   was driving them. `arm.py move <servo> <pos>` is the pathless form.
+2. I conflated where the hand is with where the camera looks. The camera looks
+   along the gripper axis, so the floor patch in frame is **79 mm further out**
+   than the grasp point at the pose we were using. Hovering "over" the object
+   showed bare tile several times because of it.
+
+**Step 2 has an answer, and it is not the K-turn.** One forward arc (speed 60,
+0.6 s, steer right 45) moved the box's bearing from base 310 to 390 — 80 units,
+**20 degrees**, measured by which bearing centres the box. A K-turn with that
+day's parameters gave +0.1 deg. Routes should be planned as arcs; spot turns on
+this chassis are not a manoeuvre, they are a rounding error.
+
+**Blocked on the sonar.** After two drive steps the ultrasonic returned exactly
+24.837 cm on nine consecutive reads, across three turret bearings, and across two
+very different arm poses (R=140/z=110 and R=106/z=179). A real echo moves when
+the arm moves. It survived a `car.py restart-server`. The preflight correctly
+refuses to authorise a drive it cannot measure, so the delivery is stopped there.
+
+**Corrected a Hermes skill edit before it became doctrine.** It had written
+`servo 5: 900-980` into arm-control as "wrist bent down sharply". Those poses have
+a pitch of 30-53 deg from vertical — they point ABOVE the horizon; 180 is down.
+Replaced with the measured table, and its reference file is annotated rather than
+deleted. Its instinct (look down, not at eye level) was right; only the numbers
+were inverted.

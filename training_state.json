@@ -29,7 +29,8 @@
         "left 30deg @speed40 0.8s -> ORB dyaw -12.4deg; right 30deg same params -> +1.4deg. Commanded magnitudes equal, measured differ 9x.",
         "a LEFT turn DECREASED world.json theta (53.7 -> 41.3): left is negative in this convention, and the sign confusion in the plan is real and now has numbers.",
         "nav_state/pose.json is stale at 0.0 while nav.py writes nav_state/world.json - two pose stores, and the operator read the wrong one.",
-        "both measurements are ORB low-confidence with no tile-line fallback available at this heading."
+        "both measurements are ORB low-confidence with no tile-line fallback available at this heading.",
+        "FORWARD ARCS TURN, K-TURNS DO NOT: one arc (speed 60, 0.6s, steer right 45) shifted the box bearing by 20 deg, measured visually; a K-turn with the same-day parameters gave +0.1 deg. Plan routes as arcs."
       ],
       "note": "first real measurements 2026-08-29 17:26/17:29; criterion needs error <15deg five times running, currently 0 of 2"
     },
@@ -44,7 +45,12 @@
     },
     "4": {
       "name": "pick an object off the floor",
-      "status": "not_started"
+      "status": "first_success",
+      "tally": {
+        "attempts": 2,
+        "held": 1
+      },
+      "note": "sock grasped 2026-08-29 18:0x at R=200, bearing -72.5deg, z=-75, grip stalled 679; wiggle test passed. First attempt (grip 642) dropped it during arm.py home - do not fold a held soft object."
     },
     "5": {
       "name": "socks into the box under the balcony door",

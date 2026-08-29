@@ -348,3 +348,51 @@ Two rules:
 
 If the arm is found extended and low, `arm.py home` folds it back; do that before
 anything else, because every frame taken from a drooping arm is also mis-aimed.
+
+## Visual search for floor objects
+
+The instinct this section was first written with is right: to find something on
+the floor, look DOWN, not at eye level. The servo numbers it was first written
+with are wrong, and they are wrong in the direction that wastes an afternoon.
+
+**Do not hand-pick servo values for this. Use `nav.py lookout --view floor` or
+`nav.py scan --view floor`.**
+
+If you are tempted to write `arm.py step 5:950` because bigger sounds like
+"further down", here is what those poses actually do. Pitch is measured from
+vertical: **180 deg is straight down, 90 deg is horizontal, 0 deg is straight
+up.**
+
+| pose | pitch | pointing at |
+|---|---|---|
+| `3:237,4:843,5:682` (`--view deck`) | 106 deg | just past horizontal, down at the deck |
+| `3:237,4:843,5:735` (`--view floor`) | 93 deg | the floor, 1-3 m out |
+| `3:237,4:843,5:780` (`--view horizon`) | 82 deg | level: furniture, doorways |
+| `3:250,4:900,5:940` | **53 deg** | well ABOVE the horizon |
+| `3:200,4:800,5:980` | **30 deg** | the ceiling |
+
+None of the 900-980 family looks down. On 2026-08-29 a sock hunt ran at those
+values with the frames named `floor_socks.jpg` and `found_socks.jpg`; every one
+of them is a curtain and a blown-out window, and the search failed at the camera
+angle before perception was ever consulted.
+
+Sweep with the BASE (servo 6) at a named pitch — that is what `nav.py scan` does.
+Note the direction, verified against the user 2026-08-29: **increasing servo 6
+turns the camera to the robot's LEFT**, so the right-hand side is servo 6 BELOW
+470.
+
+If an object is very close (within ~30 cm) it can sit under the near edge of the
+`deck` view. Do not back away to find it — that is a drive, and it needs a
+preflight and a reason. Rotate the base and try `floor`/`deck` first.
+
+### Where the camera looks is not where the hand is
+
+The camera sits on the wrist and looks along the gripper axis, so the patch of
+floor in frame is offset AHEAD of the grasp point. Measured at
+`3:237,4:843,5:500,6:210`: the hand is at R=154 mm, the camera ray meets the
+floor at **R=233 mm** — 79 mm further out.
+
+This is why hovering "over" an object that was just in frame shows bare floor:
+the hover puts the HAND where the object appeared, and the object is really
+further out along the ray. Project the ray to the floor, or descend from the pose
+that has the object in view instead of jumping to a new pose family.

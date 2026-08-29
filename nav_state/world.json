@@ -4,7 +4,7 @@
   "pose": {
     "x_mm": 688.5707422970677,
     "y_mm": 336.7906416203652,
-    "theta_deg": 42.754630966146294
+    "theta_deg": 42.87169279590816
   },
   "trajectory": [
     {
@@ -153,6 +153,13 @@
       "theta_deg": 42.754630966146294,
       "t": "2026-08-29 17:29:26",
       "note": "turn right ang=30 dur=0.8s -> dyaw=+1.4deg from ORB (low confidence, no tile-line fallback available); ORB=+1.4deg(matches 2,centre 0) tile=n/a"
+    },
+    {
+      "x_mm": 688.5707422970677,
+      "y_mm": 336.7906416203652,
+      "theta_deg": 42.87169279590816,
+      "t": "2026-08-29 18:10:42",
+      "note": "turn left ang=30 dur=0.8s -> dyaw=+0.1deg from ORB; ORB=+0.1deg(matches 68,centre 29) tile=n/a"
     }
   ],
   "keyframes": [
@@ -874,6 +881,62 @@
         }
       ],
       "t": "2026-08-29 17:46:43"
+    },
+    {
+      "id": 13,
+      "pose": {
+        "x_mm": 688.5707422970677,
+        "y_mm": 336.7906416203652,
+        "theta_deg": 42.754630966146294
+      },
+      "observations": [
+        {
+          "neck_deg": -80.0,
+          "world_bearing_deg": -37.2,
+          "image": "kf13_n-80.jpg",
+          "range_mm": null,
+          "t": "2026-08-29 17:54:24",
+          "orb_keypoints": 500,
+          "descriptors_file": "kf13_n-80.jpg.orb.npy"
+        },
+        {
+          "neck_deg": -40.0,
+          "world_bearing_deg": 2.8,
+          "image": "kf13_n-40.jpg",
+          "range_mm": null,
+          "t": "2026-08-29 17:54:25",
+          "orb_keypoints": 500,
+          "descriptors_file": "kf13_n-40.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 0.0,
+          "world_bearing_deg": 42.8,
+          "image": "kf13_n+00.jpg",
+          "range_mm": null,
+          "t": "2026-08-29 17:54:27",
+          "orb_keypoints": 221,
+          "descriptors_file": "kf13_n+00.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 40.0,
+          "world_bearing_deg": 82.8,
+          "image": "kf13_n+40.jpg",
+          "range_mm": null,
+          "t": "2026-08-29 17:54:29",
+          "orb_keypoints": 412,
+          "descriptors_file": "kf13_n+40.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 80.0,
+          "world_bearing_deg": 122.8,
+          "image": "kf13_n+80.jpg",
+          "range_mm": null,
+          "t": "2026-08-29 17:54:30",
+          "orb_keypoints": 80,
+          "descriptors_file": "kf13_n+80.jpg.orb.npy"
+        }
+      ],
+      "t": "2026-08-29 17:54:32"
     }
   ],
   "landmarks": [],
@@ -1034,6 +1097,19 @@
         "sigma_theta_deg": 4.0,
         "kind": "odometry",
         "t": "2026-08-29 17:46:43"
+      },
+      {
+        "i": 12,
+        "j": 13,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-08-29 17:54:32"
       }
     ],
     "last_optimize": null
