@@ -154,3 +154,34 @@ assertion written without opening the frame that was supposed to support it.
 Skill now carries the table, the direction of the scale ("bigger servo 5 looks
 HIGHER"), the rule that `nav.py lookout --view` is the only sanctioned way to aim,
 and the tell: **a frame showing curtain or ceiling is the pitch, not the room.**
+
+## 2026-08-29 17:51 — instructed re-run of the sock search: this one is sound
+
+Sent Hermes a directed task through a FRESH `hermes -z` session rather than
+resuming the live Telegram one, because that session's context still held the
+pre-correction text of both skills.
+
+It did the job properly this time: `nav.py scan --view floor` across five
+bearings, a vision query per frame, and — the part that was missing all
+afternoon — it **rejected its own frame** at +80° on the grounds that no floor
+was visible in it. Result reported as **socks not found**, with one row appended
+to `training_log.csv`. No earlier rows rewritten.
+
+I opened the frames rather than taking the report on trust:
+
+- `kf12_n-80` matches its description closely: floor, power strip, soldering iron
+  on its stand, black cables, a small blue object, sofa behind. Accurate. Note
+  this bearing is where the workshop hazards sit — power strip and soldering iron
+  directly on the floor, both on the do-not-touch list.
+- `kf12_n+40` shows a desk from underneath, its legs, wall and floor. Floor
+  visible, no socks — the verdict is right. But the report's "feet in socks in
+  the background" is not there; the vision model invented it and Hermes passed it
+  through without opening the frame. The conclusion survived; the detail did not.
+
+So the honest state: **no socks are visible on the floor from where the robot is
+parked**, across five bearings. That is not a perception failure any more. It is
+the navigation blocker — the robot cannot look anywhere else without moving, and
+moving is what step 2 has not earned yet.
+
+Battery 7.73 → 7.33 V over the afternoon. Return threshold is 6.9 and there is no
+self-charging (step 6), so a manual charge is coming before it becomes a limit.
