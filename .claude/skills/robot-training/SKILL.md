@@ -26,8 +26,17 @@ stage isolated so a failure names itself.
 
 Exit 0 = go. Exit 1 = BLOCKED. **Exit 2 = UNKNOWN, which means a sensor did not
 answer — treat it exactly like BLOCKED.** A check that crashed is not permission.
-Re-run the preflight after anything that could have changed the world: a person
-walking through, a completed drive, more than ~2 minutes elapsed.
+
+**One preflight authorises ONE manoeuvre.** Not a series, not a calibration
+session. On 2026-08-29 a run preflighted once at 17:25 and then turned twice,
+three minutes apart — the second turn moved on a verdict about a world that had
+already changed underneath it. If a person walked in during the first turn,
+nothing would have noticed. Re-run it before every single move, and always after
+a completed drive or more than ~2 minutes.
+
+The person check costs about a minute, which is the real reason to be tempted.
+That cost is the point: it is what makes an unattended robot safe to leave
+moving, and it caps how fast a calibration series can run.
 
 `safety.py` enforces, in code: battery return/stop thresholds, forward clearance,
 and "is a person in frame". It writes every verdict to `safety_log.csv`.

@@ -21,10 +21,17 @@
       "name": "turn a commanded angle",
       "status": "in_progress",
       "tally": {
-        "attempts": 0,
+        "attempts": 2,
         "within_15deg": 0
       },
-      "blocker": "heading sign/scale disagree: +25deg CCW claimed after five left K-turns, view matched a negative bearing. One K-turn measured 2.4deg."
+      "blocker": "two turns attempted (left 30, right 30 both at speed 40). Left turn: ORB measured -12.4 deg (Low confidence). Right turn: ORB measured +1.4 deg. Neither achieved commanded magnitude. Need systematic turn_table with multiple durations/amplitudes.",
+      "findings": [
+        "left 30deg @speed40 0.8s -> ORB dyaw -12.4deg; right 30deg same params -> +1.4deg. Commanded magnitudes equal, measured differ 9x.",
+        "a LEFT turn DECREASED world.json theta (53.7 -> 41.3): left is negative in this convention, and the sign confusion in the plan is real and now has numbers.",
+        "nav_state/pose.json is stale at 0.0 while nav.py writes nav_state/world.json - two pose stores, and the operator read the wrong one.",
+        "both measurements are ORB low-confidence with no tile-line fallback available at this heading."
+      ],
+      "note": "first real measurements 2026-08-29 17:26/17:29; criterion needs error <15deg five times running, currently 0 of 2"
     },
     "3": {
       "name": "drive to a named place",

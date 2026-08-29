@@ -53,20 +53,34 @@ EMBODIMENT = (
 )
 
 
-def _post(messages, max_tokens=1500):
+def _post(messages, max_tokens=1500, json_mode=False):
     """Returns the reply text.
 
     The model reasons before answering and its reasoning tokens are billed
     against max_tokens, so the budget must be generous or `content` comes back
     empty/truncated with finish_reason='length'. When the answer really did get
     cut off, fall back to the reasoning trace - for a short JSON answer the
-    conclusion is usually stated there too.
+    conclusion is usually stated there too. That fallback is OFF under
+    `json_mode`: there, an empty content means the budget ran out mid-object, and
+    handing the caller the prose trace instead is what produced "unparseable
+    reply" in one call out of three even after constrained decoding was on.
+
+    `json_mode` turns on the server's constrained decoding. Asking for JSON in
+    the prompt is not enough: the model kept replying with prose ("Let me look
+    at this more carefully..."), which `find` could only report as an
+    unparseable answer - indistinguishable, to a caller reading exit codes, from
+    an honest "not found". With response_format the content comes back as JSON
+    and the deliberation lands in the separate `reasoning` field, where it
+    belongs. Verified against this endpoint before switching it on.
     """
-    body = json.dumps({
+    payload = {
         "model": MODEL_NAME,
         "max_tokens": max_tokens,
         "messages": messages,
-    }).encode()
+    }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
+    body = json.dumps(payload).encode()
     req = urllib.request.Request(
         MODEL_URL.rstrip("/") + "/chat/completions", body,
         {"Content-Type": "application/json", "Authorization": "Bearer EMPTY"})
@@ -74,7 +88,7 @@ def _post(messages, max_tokens=1500):
         data = json.loads(r.read().decode())
     choice = data["choices"][0]
     content = (choice["message"].get("content") or "").strip()
-    if not content:
+    if not content and not json_mode:
         content = (choice["message"].get("reasoning") or "").strip()
     return content
 
@@ -215,7 +229,7 @@ def find(path, target, save_grid=None):
     )
     # Localising costs far more reasoning than describing: the model walks the
     # grid cell by cell. 1500 tokens truncated a positive answer in testing.
-    raw = _post(_user(prompt, grid), max_tokens=3500)
+    raw = _post(_user(prompt, grid), max_tokens=3500, json_mode=True)
     obj = _json_from(raw)
     if obj is None:
         return {"found": False, "cx": None, "cy": None, "cell": None,

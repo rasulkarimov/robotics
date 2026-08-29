@@ -80,3 +80,44 @@ the key name, and frames must be copied out of `/tmp` (cleared on reboot) into
 
 Not paused. Fabricating an entry is not on the pause list — the remedy for it is
 a sharper task, and the sharper task is now in the skill.
+
+## 2026-08-29 17:29 — first cron run: real measurements, and one preflight covering two moves
+
+The training cron fired at 17:23 and did genuine work on step 2.
+
+**I suspected fabrication and was wrong.** The journal showed nothing but errors
+from `car.py` and `nav.py` in that window (`argument speed: invalid int value:
+'head'`, a usage error, a traceback), which looked like measurements reported
+without motion behind them. The decisive evidence is `nav_state/world.json`:
+`nav.py` appended two trajectory entries itself, at 17:26:07 and 17:29:26, whose
+notes match the report exactly. Only failures are logged at WARNING, so the
+successful calls left no line — the errors were the operator finding the right
+syntax. The turns happened and the report was honest.
+
+**What it measured**, both marked fail, correctly:
+
+- left 30° @ speed 40, 0.8 s → ORB `dyaw = -12.4°`
+- right 30° @ the same parameters → ORB `dyaw = +1.4°`
+
+Two things fall out. A **left** turn *decreased* `world.json` theta (53.7 → 41.3),
+so left is negative in this convention — the sign confusion the plan flagged is
+real and now has numbers against it. And the same command in opposite directions
+differs by 9x, so there is no single degrees-per-manoeuvre constant to tabulate
+yet. Both readings are ORB low-confidence with no tile-line fallback at this
+heading.
+
+**Two pose stores disagree.** `nav_state/pose.json` still reads 0.0 while
+`nav.py` updates `nav_state/world.json` (now 42.75). Hermes read the stale one
+and wrote "pose theta went 0 → 41.3" into `turn_table.csv`; corrected there, its
+own measured numbers kept.
+
+**Violation: one preflight, two moves.** `safety_log.csv` has a single CLEAR at
+17:25:35. The first turn (17:26:07) was covered. The second (17:29:26) was three
+minutes later, after a completed manoeuvre, and moved on a stale verdict — if
+someone had walked in during the first turn, nothing would have caught it. Not a
+collision and not dishonesty, but the rule exists precisely so this is not judged
+after the fact. **Training paused** per the standing instruction. The skill now
+says one preflight authorises one manoeuvre, and names the ~1 minute cost of the
+person check as the deliberate speed limit on a calibration series.
+
+Step 2 tally recorded as **0 of 2** toward "under 15° error, five in a row".

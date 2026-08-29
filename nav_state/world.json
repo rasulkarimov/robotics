@@ -4,7 +4,7 @@
   "pose": {
     "x_mm": 688.5707422970677,
     "y_mm": 336.7906416203652,
-    "theta_deg": 53.73313723939299
+    "theta_deg": 42.754630966146294
   },
   "trajectory": [
     {
@@ -139,6 +139,20 @@
       "theta_deg": 53.73313723939299,
       "t": "2026-08-29 15:04:22",
       "note": "turn left ang=60 dur=1.2s -> dyaw=+3.6deg from tile-line (ORB low confidence); ORB=-0.1deg(matches 3,centre 0) tile=+3.6deg"
+    },
+    {
+      "x_mm": 688.5707422970677,
+      "y_mm": 336.7906416203652,
+      "theta_deg": 41.33763466131566,
+      "t": "2026-08-29 17:26:07",
+      "note": "turn left ang=30 dur=0.8s -> dyaw=-12.4deg from ORB (low confidence, no tile-line fallback available); ORB=-12.4deg(matches 12,centre 2) tile=n/a"
+    },
+    {
+      "x_mm": 688.5707422970677,
+      "y_mm": 336.7906416203652,
+      "theta_deg": 42.754630966146294,
+      "t": "2026-08-29 17:29:26",
+      "note": "turn right ang=30 dur=0.8s -> dyaw=+1.4deg from ORB (low confidence, no tile-line fallback available); ORB=+1.4deg(matches 2,centre 0) tile=n/a"
     }
   ],
   "keyframes": [
