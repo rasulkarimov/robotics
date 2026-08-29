@@ -71,9 +71,10 @@ Physical constraints learned live:
 
 Pipeline, roughly in order of sophistication: `pick.py` (older, homography-based,
 one fixed calibrated zone) -> `pick3d.py` (full 3D camera model) -> `pick_eye.py`
-(current: eye-in-hand, camera+jaws are one rigid body, so the claw sits at a FIXED
-pixel `rig.GRASP_PIXEL` at any height/reach - steering the object onto that pixel
-IS the whole aiming problem) -> `grab2.py` (two-stage: aim wide from HIGH up, then
+(current: eye-in-hand, camera+jaws are one rigid body, so the claw sits at a fixed
+pixel for a GIVEN MOUNTING - steering the object onto that pixel IS the whole
+aiming problem, but measure the pixel live rather than trusting the stored
+`rig.GRASP_PIXEL`; see "The closing point goes stale" below) -> `grab2.py` (two-stage: aim wide from HIGH up, then
 a timid bottom pass) -> `tanggrab.py` (rotates the wrist so jaws close across an
 elongated object's SHORT axis) -> `orbit.py` (locate + multi-hop move, wraps grab2)
 -> `grasp.py` (act -> verify -> retry/escalate loop wrapping tanggrab).
@@ -150,3 +151,122 @@ jaws closed beside the bar). The wiggle test caught it correctly, and an immedia
 retry from the same position succeeded. So: on a failed wiggle test, don't
 diagnose - just open the jaws and retry the whole locate->aim->grasp once from the
 same hint; only escalate to a human after a second consecutive miss.
+
+
+### The closing point goes stale, and it fails invisibly
+
+`rig.GRASP_PIXEL` is only a constant for one camera mounting. Measured live on
+2026-07-26 at three poses — (325,342), (392,238), (337,226) — none of them near
+the stored (170,146).
+
+What makes this the worst failure mode on the arm: the aim loop drives the object
+ONTO the stored pixel, so a stale value converges *perfectly onto the wrong
+point*. The logs show textbook convergence, 5-17 px, on every failed grasp.
+Nothing in the output looks wrong. Four consecutive grasps failed this way. The
+signature is visible only from the side: **a consistent one-sided miss** — the
+user diagnosed it in one sentence ("брус попадает под левую клешню все время").
+
+`pick_eye.measure_grasp_pixel()` does it in one move (close empty jaws, find the
+two red markers, take the midpoint) and `tanggrab.grasp_bar()` now calls it
+automatically. For any NEW grasp code, measure once per session. If grasps fail
+while the aim looks good, suspect this before anything else.
+
+**Take the median of three.** The first reading after a move is regularly an
+outlier — (218,255) then (188,354) at one pose — because the arm is still
+settling. Median-of-3 cut the spread from 100+ px to ~5 px.
+
+**Order matters:** measure the closing point AFTER `locate_near` has put the arm
+over the object, and BEFORE centring. Centring steers towards the closing point,
+so measuring afterwards leaves it chasing a stale target — that drove R down to
+its 120 mm clamp, past the ~140 mm floor where the jaws catch the ultrasonic
+bracket, and still finished 73 px off.
+
+### Verify a gain's SIGN by nudging, not by reading the code
+
+`center_grabframe()` had two independent bugs that both walked it away from the
+object, and the logs looked identical to "not converging". Measured live at
+R=150 by nudging and watching the blob:
+
+- base: +25 units moved the blob +122 px → **4.9 px/unit** (the code assumed 2.5,
+  so every horizontal correction overshot ~2x and oscillated)
+- R: −15 mm moved the blob −34.4 px → **2.29 px/mm**, and increasing R moves the
+  blob DOWN the frame — the error term must be `(GY - y)`, the code had it
+  inverted
+
+Both numbers are position-specific: re-derive after any remount. A wrong sign and
+a wrong gain are indistinguishable from the aim error alone.
+
+### Aim at the height where the jaws will close, not from the hover
+
+The closing point is fixed in the image, but the OBJECT's pixel is not — it moves
+as the camera descends. Same untouched object, base=467, R=165:
+
+| arm z | object dx vs closing point |
+|---|---|
+| +18 (hover) | +13 px |
+| −15 | +31 px |
+| −42 (grasp height) | +13.5 px, dy +56.5 px |
+
+Aiming from 60 mm up understated the lateral error by ~18 px (~2.5 mm) and said
+nothing at all about the radial error. Two closes came up empty while every cheap
+signal said "good". **Align within ~10 mm of the working height, then descend
+straight down** with no further lateral correction. Iterating down in steps and
+re-measuring each time converges: (+13.5,+56.5) → (−11.5,−5.0) → (+5.5,+11.5).
+
+### The stall reading cannot tell empty from held
+
+Empty jaws read **686** on one object; a real grip on it read **676-681**. Both
+sit inside the band the code calls "solid contact", so that band only rules out a
+full close to clamp. It is not a grasp check. The wiggle test is (above), and for
+some objects there is a better one — with the charger plug, the socket's LED
+becoming visible means the plug really is in the jaws.
+
+### Open the jaws BEFORE moving away, and open them to the right width
+
+User, after a good insertion that came undone: "Гашение было хорошее. Ты сначала
+должен разжать клещи, потом подняться." Once an object is seated or resting,
+anything holding it is a mechanical link: arm motion transfers straight into the
+object. So the tail of a place is always **press → measure residual → release →
+only then retract**.
+
+Release width is a second, separate decision, and the wrong one undid a good
+insertion by itself: `1:156` is FULLY open, and at that width the jaw arms swing
+sideways far enough to catch an object already standing in place and drag it out.
+Two jobs, two numbers:
+
+- measuring or approaching an object on the deck → **156** (kills the jaws' shadow)
+- releasing something already seated → **515** (clears its width without sweeping)
+
+And check the state right after the release step, not several moves later — on one
+run a plug that had popped out was accidentally pushed back in by later arm
+motion, which made a late frame look like success.
+
+### Rotate the wrist to the object, and notice when it silently refuses
+
+Closing across an object's SHORT axis is more accurate than closing at whatever
+angle is neutral. `tanggrab.wrist_for_bar()` computes this, but it **gives up
+silently and returns NEUTRAL when the measured aspect is < 1.8** — and a garbage
+measurement does that on a visibly elongated object (seen live: aspect 1.32 on a
+bar that is about 4:1, from a blob clipped at the frame edge). If rotation seems
+not to be happening, check the measured aspect before concluding the object is
+round.
+
+### Leave the arm clean after a failure, and say which left you mean
+
+A failed attempt that leaves the wrist rotated ~90° or the jaws half-closed makes
+every frame afterwards misleading — the user caught exactly that ("Тебя ничего не
+смущает? Положение клешней?"). Reset the wrist on the failure path, not at the
+start of the next attempt, and check `arm.py status` before trusting a frame.
+
+There are at least three frames in play — the robot facing forward, the camera
+image, and a person looking at the robot — and switching between them silently is
+a recurring, real source of error. **Say which one you mean every time** ("left in
+the camera image" vs "the robot's left"), and prefer a colour/blob search over a
+directional guess.
+
+### Check it yourself before asking
+
+Asked whether a plug was gripped, the user answered: "Ты можешь проверить сам."
+The wiggle test, base rotation and several camera angles are all available.
+Exhaust the robot's own senses first; escalate only after a second consecutive
+genuine failure.
