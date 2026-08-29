@@ -107,6 +107,13 @@ So: object on the floor → `--view floor`. Furniture, a doorway, a box against 
 wall → `--view horizon`. Something on the robot's own deck → `--view deck`. And
 if a frame comes back showing curtain or ceiling, that is the pitch, not the room.
 
+**And do not reach for servos 3 and 4 either.** Guessing triplets to aim the
+camera is what leaves the arm stretched out and sagging: `3:600,4:500,5:800` puts
+the hand 305 mm out at 81 mm high, past what the arm can hold at that height, at
+the worst possible gravity lever — on a battery shared with the Pi. The named
+views keep it folded at 50-106 mm and move only the wrist. See the arm-control
+skill, "Do not guess joint triplets to aim the camera".
+
 ## Places, not coordinates
 
 Dead reckoning does not survive here — a return after 10 K-turns landed somewhere

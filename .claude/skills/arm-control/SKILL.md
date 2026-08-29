@@ -317,3 +317,34 @@ NUMBER (6, 5, 4, 3) plus the string key `'pitch'`. Mixed key types, so
 Servo resolution is the precision floor for everything above: 0.25° per unit is
 ~0.87 mm at 200 mm reach, so no aiming loop can do better than about a
 millimetre, and asking for tenths is asking for noise.
+
+### Do not guess joint triplets to aim the camera
+
+Aiming the camera by trying servo-3/4/5 combinations is how the arm ends up
+stretched out and drooping. Real commands from 2026-08-29, with where each one
+actually puts the grasp point:
+
+| commanded | R (reach) | z (height) | envelope at that height |
+|---|---|---|---|
+| `3:600,4:500,5:800` ("elbow_high") | **305 mm** | 81 mm | 217 mm |
+| `3:237,4:843,5:682` (home / deck) | 106 mm | 179 mm | — |
+| `3:237,4:843,5:735` (floor) | 78 mm | 201 mm | — |
+
+The first one is 30 cm out and low: **past the reachable envelope for that
+height**, and at the maximum gravity lever the shoulder will ever see. The servo
+sags under it, it heats, and the current spike lands on a battery shared with the
+Pi. It also puts the hand 30 cm in front of the chassis, where a drive will
+swing it into furniture. That is what "the arm sat down" looks like.
+
+Two rules:
+
+- **To LOOK, use the named poses** — `nav.py lookout --view deck|floor|horizon`,
+  or `nav.py scan --view ...` to sweep. They keep the arm folded (R = 50-106 mm)
+  and only change the wrist. There is no reason to touch servos 3 and 4 to see
+  something.
+- **To REACH, use `kin.ik_search(x, y, z)`** and check `kin.reachable()` first.
+  It returns servo values that are inside the envelope by construction. Hand-
+  picked triplets are not checked by anything.
+
+If the arm is found extended and low, `arm.py home` folds it back; do that before
+anything else, because every frame taken from a drooping arm is also mis-aimed.
