@@ -96,9 +96,26 @@ def _arm(*args, timeout=30):
 # joints 3/4/5 instead of the old one-off periscope pose.
 LOOKOUT_POSE = {"3": 237, "4": 843, "5": 682}
 
+# Wrist pitch decides WHAT the "lookout" actually looks at, and reusing HOME_POSE's
+# 682 for everything was hiding the room. Measured live 2026-08-29 by stepping
+# servo 5 and looking at the frames:
+#   682 "deck"    - about 1 m of floor ahead. Ten bearings swept at this pitch
+#                   returned bare tile and nothing else; it is a close-work pose,
+#                   not a survey pose.
+#   735 "floor"   - floor from roughly 1 to 3 m. THIS is the one for finding an
+#                   object lying on the floor across the room.
+#   780 "horizon" - furniture and doorways: sofa, chairs, kitchen bar, hallway.
+#                   Use it to work out where the robot is, not to find objects.
+# All three keep joints 3/4 at the home shape, and 735/780 raise the wrist AWAY
+# from the deck, so rotating the base stays safe (base_swing_guard warns about
+# the deviation, but the direction is the harmless one).
+LOOKOUT_PITCH = {"deck": 682, "floor": 735, "horizon": 780}
+DEFAULT_VIEW = "floor"
 
-def raise_to_lookout():
-    moves = ",".join(f"{s}:{p}" for s, p in LOOKOUT_POSE.items())
+
+def raise_to_lookout(view=DEFAULT_VIEW):
+    pose = dict(LOOKOUT_POSE, **{"5": LOOKOUT_PITCH[view]})
+    moves = ",".join(f"{s}:{p}" for s, p in pose.items())
     tmp = os.path.join(STATE_DIR, "_lookout.jpg")
     os.makedirs(STATE_DIR, exist_ok=True)
     r = _arm("step", moves, tmp, 1400)
@@ -417,8 +434,9 @@ def cmd_scan(args):
     w = load_world()
     os.makedirs(FRAMES_DIR, exist_ok=True)
     if args.lookout:
-        print("raising camera to lookout pose...")
-        raise_to_lookout()
+        print(f"raising camera to lookout pose (view={args.view}, "
+              f"servo5={LOOKOUT_PITCH[args.view]})...")
+        raise_to_lookout(args.view)
         time.sleep(0.4)
     angles = [float(a) for a in args.neck.split(",")]
     kf_id = len(w["keyframes"])
@@ -557,7 +575,7 @@ def cmd_motionmap(args):
 
 
 def cmd_lookout(args):
-    ok = raise_to_lookout()
+    ok = raise_to_lookout(args.view)
     if ok and args.snapshot:
         car.snapshot(args.snapshot)
         print(f"lookout snapshot -> {args.snapshot}")
@@ -952,8 +970,12 @@ def main():
     sc.add_argument("--settle", type=float, default=0.5)
     sc.add_argument("--lookout", action="store_true",
                     help="raise camera to lookout pose before sweeping")
+    sc.add_argument("--view", choices=sorted(LOOKOUT_PITCH), default=DEFAULT_VIEW,
+                    help="what the lookout pose aims at (see LOOKOUT_PITCH)")
     lo = sub.add_parser("lookout", help="raise camera to the lookout pose")
     lo.add_argument("--snapshot", help="save a snapshot from the lookout pose")
+    lo.add_argument("--view", choices=sorted(LOOKOUT_PITCH), default=DEFAULT_VIEW,
+                    help="what the lookout pose aims at (see LOOKOUT_PITCH)")
     la = sub.add_parser("landmarks", help="match ORB features across a scan's views")
     la.add_argument("--kf", type=int, default=-1, help="keyframe index")
     la.add_argument("--png", help="write the match visualization here")
