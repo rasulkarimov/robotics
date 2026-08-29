@@ -79,6 +79,34 @@ factor. Find the sign first, then build the table.
 If the chassis physically cannot exceed ~10 deg per manoeuvre, that is a finding,
 not a failure: record it, and plan routes as long arcs instead of spot turns.
 
+## Looking for something: never hand-pick the wrist pitch
+
+Use `nav.py lookout --view <deck|floor|horizon>` or `nav.py scan --view <...>`.
+Do not write `arm.py step 5:NNN` yourself. The three values are measured against
+real frames and the named view is the whole point of them existing.
+
+**The scale runs the way you would not guess: a BIGGER servo 5 looks HIGHER.**
+
+| servo 5 | view | what is in frame |
+|---|---|---|
+| 682 `deck` | steeply down | about a metre of bare tile, plus the jaws |
+| 735 `floor` | down and out | the floor from ~1 to 3 m — **this is the one for an object on the ground** |
+| 780 `horizon` | level | furniture, doorways, the far wall |
+| above 780 | up | curtains, window, wall. Nothing on the floor is here. |
+
+On 2026-08-29 a sock hunt ran at **780 and 850** with the frames named
+`view_floor.jpg`, `floor_socks.jpg`, `found_socks.jpg`. Every one of them shows a
+curtain and a blown-out window — no floor in frame at all, and `found_socks.jpg`
+contains no socks. The search failed at the camera angle, before perception got a
+chance. 780 is ALREADY the horizon; there is nothing above it but wall.
+
+There is also no "look further down" below `deck`: 682 is already steep, and 500
+or 580 just points into the robot's own chassis.
+
+So: object on the floor → `--view floor`. Furniture, a doorway, a box against a
+wall → `--view horizon`. Something on the robot's own deck → `--view deck`. And
+if a frame comes back showing curtain or ceiling, that is the pitch, not the room.
+
 ## Places, not coordinates
 
 Dead reckoning does not survive here — a return after 10 K-turns landed somewhere

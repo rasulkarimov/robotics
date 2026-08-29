@@ -121,3 +121,36 @@ says one preflight authorises one manoeuvre, and names the ~1 minute cost of the
 person check as the deliberate speed limit on a calibration series.
 
 Step 2 tally recorded as **0 of 2** toward "under 15° error, five in a row".
+
+## 2026-08-29 17:45 — the sock hunt was aimed at the window
+
+Asked why the robot cannot find the socks. It is not perception and it is not the
+model: **the camera was pointed above the horizon.**
+
+Hermes writes `arm.py step 5:NNN` by hand instead of calling
+`nav.py lookout --view floor`, and it has the scale backwards. Frames from today,
+all in the standard lookout shape (3:237, 4:843) so only the wrist pitch differs:
+
+| what it commanded | what it named the file | what 5:NNN actually aims at |
+|---|---|---|
+| `5:780` | `view_floor.jpg`, `found_socks.jpg`, `wrist_down.jpg` | the **horizon** |
+| `5:680` | `view_horizon.jpg` | the **deck** |
+| `5:580`, `5:500` | `view_deck.jpg`, `door_level.jpg` | below the deck, into the chassis |
+| `5:820`, `5:850` | `door_floor.jpg`, `floor_socks.jpg`, `grab_socks.jpg` | **above** the horizon |
+
+I opened two of them. `floor_socks.jpg` (5:850) and `found_socks.jpg` (5:780) are
+both a curtain and a blown-out window — no floor anywhere in frame, and no socks
+in the frame named for finding them. The search failed at the camera angle,
+several steps before perception was ever consulted.
+
+It is not that Hermes never knew: `window_view_deck_center.jpg` (682),
+`window_view_floor_center.jpg` (735) and `window_view_horizon_center.jpg` (780)
+are named correctly, so it had read `LOOKOUT_PITCH` at some point. Then it
+invented 850 and 950 for "further down", which is the opposite direction.
+
+This is the same shape as the rejected `box_target` two hours earlier: an
+assertion written without opening the frame that was supposed to support it.
+
+Skill now carries the table, the direction of the scale ("bigger servo 5 looks
+HIGHER"), the rule that `nav.py lookout --view` is the only sanctioned way to aim,
+and the tell: **a frame showing curtain or ceiling is the pitch, not the room.**
