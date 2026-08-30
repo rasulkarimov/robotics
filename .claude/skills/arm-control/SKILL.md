@@ -84,42 +84,36 @@ false-positive on any other blue thing in frame (a blanket, someone's blue sleev
 If a "found" pixel corresponds to a big blob near a frame corner rather than a
 small blob near the floor, be suspicious before committing to a grasp there.
 
-### Object category: what can actually be grasped
+### The box that "could not be grasped" was never gripped at all
 
-Not everything between the jaws stays there when you lift. The arm has two reliable
-object profiles from long drills:
+**LEAD CORRECTION 2026-08-30.** A session concluded that a glossy hollow box is
+physically ungraspable - friction and compliance limited, force cannot fix it -
+and wrote that into this skill with a table of object classes. Checked on the
+hardware, and the conclusion does not survive.
 
-**Held reliably (19/20 at varied angles/distances):**
-- Rigid bars with flat or slightly rounded sides (the 12 cm blue training bar).
-  The jaws deform the grip slightly and the bar is stiff, so motion transfers
-  evenly through the object.
+**The gripper direction was inverted.** Servo 1: **156 = fully OPEN, 686 = fully
+CLOSED**, as this file's joint map has always said. That session clamped to 280,
+300, 350, 400 and 450 and called 280 "maximum clamp". Every one of those is in
+the OPEN half. The jaws were never closed on the box; it fell because nothing was
+holding it.
 
-**Dropped despite apparent grip (0/5):**
-- Lightweight hollow boxes with glossy/printed paper surfaces. These have three
-  failure modes working together:
-  1. The surface is slippery - the jaws close but do not bite. Servo 1 reads
-     350-400 (apparently tight) yet the box slides out on any tilt.
-  2. The walls compress on clamping - the box deforms inward instead of
-     pressing back against the jaws, so the servo encoder sees load while the
-     actual grip is weak.
-  3. The mass-to-friction ratio is bad - even a gentle lift shifts the center
-     of mass past the friction limit.
+Photographed both ends to be sure: at 686 the two red pads sit together in the
+middle of the frame, at 156 they swing out of view entirely.
 
-A session trying to lift a white paper box (2026-08-30) ran five attempts with
-servo-1 values from 280-450 (280 is near maximum clamp), wiggle tests that looked stable at grab height but
-failed on lift, and every verified check (servo below 400, visual confirmation of
-jaws around object, no visible gap). The box still dropped each time the arm
-pulled it clear of the floor.
+**And the arm was not over the box.** Closing properly to 700 at that same pose
+stalls at **687** - the empty-jaws value - so the jaws meet air. The box sits to
+the left of the closing point. Remember the camera looks along the gripper axis
+and sees about 79 mm BEYOND the grasp point: a box filling the frame is not a box
+between the jaws.
 
-**What to do:**
-- For a box like this, do not keep retrying tighter clamps - the problem is not
-  force, it is friction and compliance.
-- Options: place the box somewhere rather than lifting (push/slide it there),
-  ask the user to relocate it, or have the user place it on a surface where a
-  down-and-release is a valid move.
-- The user directive "не езжай, просто подними" overrides the first option -
-  respect it, attempt the lift several times with varied clamp values, report
-  honestly when the physical limits are reached, and offer alternatives.
+**What was actually missing:** an aiming loop. The box is white, the detector is a
+blue mask, so `see()` finds nothing and there is no centring - the pose was
+guessed by hand with raw `arm.py step`. That is the "swap the detector, not the
+pipeline" work, not a physics limit.
+
+So: before concluding an object cannot be grasped, prove the jaws closed ON it.
+A stall at 686-687 means they closed on nothing. And no camera, depth or
+otherwise, fixes a clamp commanded in the wrong direction.
 
 ### Finding the object: use the hint first, sweep only blind
 

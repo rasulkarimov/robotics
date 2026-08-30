@@ -1,3 +1,12 @@
+> **LEAD CORRECTION 2026-08-30.** The conclusion below - that the box is
+> friction-limited and cannot be lifted - is WRONG. Servo 1 is 156=OPEN /
+> 686=CLOSED, so every "clamp" in this session (280-450, with 280 called
+> "максимально сильно") actually held the jaws open. Verified on the hardware,
+> and closing properly to 700 at the same pose stalls at 687, the empty-jaws
+> value, meaning the jaws were not around the box either. The real gap is an
+> aiming loop for a non-blue object. Kept as a record of the reasoning, not as
+> guidance.
+
 # Сессия 2026-08-30: Неудачные попытки захвата картонной коробки
 
 ## Задача
