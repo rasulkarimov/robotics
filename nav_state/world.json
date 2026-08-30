@@ -937,6 +937,54 @@
         }
       ],
       "t": "2026-08-29 17:54:32"
+    },
+    {
+      "id": 14,
+      "pose": {
+        "x_mm": 688.5707422970677,
+        "y_mm": 336.7906416203652,
+        "theta_deg": 42.87169279590816
+      },
+      "observations": [
+        {
+          "neck_deg": -80.0,
+          "world_bearing_deg": -37.1,
+          "image": "kf14_n-80.jpg",
+          "range_mm": null,
+          "t": "2026-08-30 12:30:01",
+          "orb_keypoints": 462,
+          "descriptors_file": "kf14_n-80.jpg.orb.npy"
+        },
+        {
+          "neck_deg": -40.0,
+          "world_bearing_deg": 2.9,
+          "image": "kf14_n-40.jpg",
+          "range_mm": null,
+          "t": "2026-08-30 12:30:04",
+          "orb_keypoints": 500,
+          "descriptors_file": "kf14_n-40.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 80.0,
+          "world_bearing_deg": 122.9,
+          "image": "kf14_n+80.jpg",
+          "range_mm": null,
+          "t": "2026-08-30 12:30:08",
+          "orb_keypoints": 484,
+          "descriptors_file": "kf14_n+80.jpg.orb.npy"
+        }
+      ],
+      "t": "2026-08-30 12:30:10"
+    },
+    {
+      "id": 15,
+      "pose": {
+        "x_mm": 688.5707422970677,
+        "y_mm": 336.7906416203652,
+        "theta_deg": 42.87169279590816
+      },
+      "observations": [],
+      "t": "2026-08-30 12:39:24"
     }
   ],
   "landmarks": [],
@@ -1110,6 +1158,32 @@
         "sigma_theta_deg": 4.0,
         "kind": "odometry",
         "t": "2026-08-29 17:54:32"
+      },
+      {
+        "i": 13,
+        "j": 14,
+        "z": [
+          0.0,
+          0.0,
+          0.12
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-08-30 12:30:10"
+      },
+      {
+        "i": 14,
+        "j": 15,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-08-30 12:39:24"
       }
     ],
     "last_optimize": null

@@ -598,3 +598,32 @@ restarts an hour, after which it logs "needs a person" and stops - a watchdog
 that spins forever hides the fault it was meant to expose. Every action goes to
 `camera_log.csv`, which finally gives the failure rate a number instead of an
 impression.
+
+## 2026-08-30 12:50 — the bar was never invisible to the detector; the search never looked at it
+
+Asked to train the blue-bar grasp. Hermes' run stalled - thirteen minutes with no
+output - so I stopped it on the user's authority and checked myself.
+
+**A wrong diagnosis I caught before acting on it.** From the photo the user sent,
+the bar measured median saturation **50** against the detector's `S>=80` floor,
+with 2.0% of pixels inside the blue mask, and I concluded the threshold was too
+high for a pencil-hatched block. Photographed with the ROBOT's camera the same
+bar reads hue 107, saturation **115**, **71.7%** in mask, against a floor of
+S=39 and 0.2%. The phone's white balance had pulled the scene warm and halved the
+saturation. Never tune a vision threshold from an image the robot did not take.
+
+**The actual cause is the search pitch.** Twelve frames across bearings 110-790
+at `deck` (682) and `floor` (735) showed no bar at all; it appeared instantly at
+pitch **500**. Both named views look a metre out and further, so anything lying
+against the robot's own base does not exist to them - the same blind zone that
+cost an hour on the sock yesterday. This is also what "он опять на потолке ищет"
+was really about: the sweep simply never covered the ground it was standing on.
+
+**The vision model earned its place in the chain.** Asked about two frames, it
+found the bar in one - "small dark elongated bar", cell B5, medium confidence,
+matching a blue speck at the frame edge I could barely resolve myself - and in
+the other refused, naming the black curl it did see as a mark that is not the
+bar. That is exactly the discrimination the colour mask lacks, and it supports
+the architecture the user proposed: vision finds, the existing servo loop
+finishes. The loop itself is colour-agnostic - `center_grabframe` works on blob
+pixels and measured gains; only `see()` is a colour mask, three lines of it.
