@@ -429,3 +429,37 @@ Three things measurement caught that guessing would not have:
 A quiet room now sweeps clean: every bearing under its own floor, verdict
 "nothing has changed". The true-positive case still needs a live test with
 something actually moving.
+
+## 2026-08-30 11:10 — live test of the orienting reflex, and three bugs it exposed
+
+Tested with the user making noise across the room. It works; getting there
+corrected one wrong assumption of theirs and two real bugs of mine.
+
+**The threshold was the problem after all.** The user doubted it, reasonably,
+because the log stayed empty. Measured: their noise from across the room reads
+RMS **51**, and the event that finally fired read **85** - against a threshold
+of 250 set from a clap at arm's length, which reads 1373. A small capsule loses
+about 27x over that distance. Threshold is now **30**, at ~1.7x the quiet room's
+maximum of 18, with two consecutive windows required. The margin is thin on
+purpose: a trigger costs a local sweep, not a model call.
+
+**Bug 1: the detection was not logged until the response finished.** The sweep
+takes ~40 s, so anyone reading the log during it saw nothing and concluded the
+robot had not heard them - which is exactly what happened. Detection is now
+written the moment it fires.
+
+**Bug 2: a stale frame counted as a successful capture.** `_frame` returned true
+if the file merely EXISTED, and /tmp keeps the previous run's frames. With the
+camera down, every capture "succeeded", the sweep compared images with copies of
+themselves, and reported a confident **"nothing has changed"** from data ten
+minutes old. Frames must now be newer than the call that asked for them, and a
+sweep that gets none says so out loud instead of returning an empty list quietly.
+
+**Bug 3, the one the user could see: the gaze was stuck.** Comparing against a
+baseline means a person who sat down and stayed put differs from it forever, so
+every sweep was dragged back to them whatever the noise. Now each sweep is
+compared with the PREVIOUS sweep. Measured immediately after the change: the
+sofa bearings fell from 24.5 and 26.1 to 0.8 and 1.1 - the still person became
+uninteresting - while the bearing where someone was walking rose to 22.4, and
+the frame there shows a person mid-stride. The baseline is still used, but only
+for the "have I been moved?" question, which is what it is actually good for.

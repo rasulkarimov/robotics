@@ -32,6 +32,13 @@ from PIL import Image, ImageChops, ImageFilter
 REPO = os.path.dirname(os.path.abspath(__file__))
 BASELINE_DIR = os.path.join(REPO, "nav_state", "room_baseline")
 STATE = os.path.join(BASELINE_DIR, "baseline.json")
+# Frames from the previous sweep. Orienting is about what changed JUST NOW, not
+# about what differs from a memory taken an hour ago: a person who sat down and
+# stayed put keeps differing from the baseline forever, so the gaze kept being
+# dragged back to them whatever the noise. Comparing with the last sweep makes a
+# still person uninteresting and a new movement interesting, which is the whole
+# point of an orienting response.
+LAST_DIR = os.path.join(REPO, "nav_state", "room_last")
 
 VENV_PY = "/home/astra/tools/venv/bin/python3"
 ARM = os.path.join(REPO, "arm.py")
@@ -63,11 +70,19 @@ def _frame(bearing, path, settle_ms=None):
     if settle_ms is None:
         swing = abs(bearing - _last_bearing) if _last_bearing is not None else 600
         settle_ms = int(600 + swing * 2.5)      # 600 units -> 2100 ms
+    started = time.time()
     subprocess.run(["sudo", VENV_PY, ARM, "step", f"{SHAPE},6:{bearing}",
                     path, str(settle_ms)],
                    cwd=REPO, capture_output=True, text=True, timeout=90)
     _last_bearing = bearing
-    return os.path.exists(path)
+    # A file that merely EXISTS proves nothing: /tmp keeps the last run's frame,
+    # so when the camera was down on 2026-08-30 every capture "succeeded" and the
+    # sweep compared stale images with themselves - reporting a confident
+    # "nothing has changed" from data minutes old. Freshness is the real test.
+    try:
+        return os.path.getmtime(path) >= started
+    except OSError:
+        return False
 
 
 def _thumb(path):
@@ -145,6 +160,7 @@ def sweep_for_change(hint=None):
     st = json.load(open(STATE))
     base = st["frames"]
     noise = st.get("self_noise", {})
+    os.makedirs(LAST_DIR, exist_ok=True)
     order = BEARINGS
     if hint is not None:
         order = sorted(BEARINGS, key=lambda b: abs(b - hint))
@@ -156,18 +172,32 @@ def sweep_for_change(hint=None):
         now = f"/tmp/orient_{b}.jpg"
         if not _frame(b, now):
             continue
+        prev = os.path.join(LAST_DIR, f"b{b}.jpg")
+        against = prev if os.path.exists(prev) else ref
         try:
-            change = _difference(_thumb(ref), _thumb(now))
+            change = _difference(_thumb(against), _thumb(now))
+            base_change = _difference(_thumb(ref), _thumb(now))
         except Exception:
             continue
         # A bearing only counts as changed once it clears its OWN wobble.
         floor = max(CHANGE_FLOOR, 3.0 * noise.get(str(b), 0.0))
-        out.append((b, change, now))
-        print(f"  bearing {b}: change {change:.1f}  (floor {floor:.1f})"
+        out.append((b, change, now, base_change))
+        src = "since last look" if against is not prev or os.path.exists(prev) else "vs baseline"
+        print(f"  bearing {b}: change {change:.1f} {src}  (floor {floor:.1f})"
               + ("  <-- CHANGED" if change >= floor else ""))
+        try:
+            import shutil
+            shutil.copyfile(now, prev)      # this sweep becomes the next one's reference
+        except Exception:
+            pass
     # Rank by how far each bearing clears ITS OWN floor, not by raw change.
     # The window bearings legitimately wobble ten points while a dark corner
     # wobbles one, so the largest raw number is routinely the least interesting.
+    if not out:
+        # Say so. Returning an empty list quietly is what made a dead camera
+        # look like a quiet room on 2026-08-30.
+        print("no bearing produced a fresh frame - is the camera up? "
+              "(`car.py status`)", file=sys.stderr)
     out.sort(key=lambda t: -(t[1] / max(bearing_floor(t[0]), 1e-6)))
     return out
 
@@ -192,7 +222,7 @@ def bearing_floor(bearing):
 def baseline_is_stale(ranked):
     if len(ranked) < 3:
         return False
-    vals = sorted(c for _, c, _ in ranked)
+    vals = sorted(t[3] for t in ranked)   # "have I moved?" is a BASELINE question
     return vals[len(vals) // 2] >= MOVED_MEDIAN
 
 
@@ -201,12 +231,12 @@ def cmd_look(args):
     if not ranked:
         return 2
     if baseline_is_stale(ranked):
-        med = sorted(c for _, c, _ in ranked)[len(ranked) // 2]
+        med = sorted(t[3] for t in ranked)[len(ranked) // 2]
         print(f"every bearing differs (median {med:.1f}) - I have been moved, "
               f"the baseline is stale. Re-run `orient.py baseline`.")
         subprocess.run(["sudo", VENV_PY, ARM, "home"], cwd=REPO, capture_output=True)
         return 3
-    b, change, path = ranked[0]
+    b, change, path = ranked[0][:3]
     if change < bearing_floor(b):
         print(f"nothing has changed in the room "
               f"(best {change:.1f} < {bearing_floor(b):.1f})")
@@ -231,7 +261,7 @@ def cmd_watch(args):
         print("baseline is stale - I have been moved. Re-run `orient.py baseline`.")
         subprocess.run(["sudo", VENV_PY, ARM, "home"], cwd=REPO, capture_output=True)
         return 3
-    b, change, _ = ranked[0]
+    b, change = ranked[0][0], ranked[0][1]
     if change < bearing_floor(b):
         print("nothing to watch")
         subprocess.run(["sudo", VENV_PY, ARM, "home"], cwd=REPO, capture_output=True)

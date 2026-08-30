@@ -35,10 +35,18 @@ RATE = 16000
 WINDOW = 0.1                      # seconds per RMS window
 SAMPLES = int(RATE * WINDOW)
 
-# Between the measured floor (~11) and a real event (~1373). Far enough from
-# both that neither room tone nor a quiet fan can reach it, and a clap or a
-# raised voice clears it by a wide margin.
-THRESHOLD = 250.0
+# Measured, not guessed. A silent room runs 10-18. A clap right beside the robot
+# hits 1373 - but the SAME noise from across the room only reaches 51, because a
+# small capsule loses about 27x over that distance. A threshold of 250 was deaf
+# to anything that was not happening at arm's length, which is not much use in a
+# robot meant to notice the room.
+#
+# 30 sits at ~1.7x the quiet room's maximum and ~1.7x below a far-side noise.
+# That margin is thin by design: the response to a trigger is a cheap local
+# sweep, no model call, so an occasional look at nothing costs seconds. Two
+# consecutive windows are required, which is what keeps a single click out.
+THRESHOLD = 30.0
+CONSECUTIVE = 2
 
 # One clap must not become five wake-ups: an event is a rising edge, and the
 # operator is slow and expensive to run.
@@ -185,11 +193,16 @@ def cmd_watch(args):
     last_wake = 0.0
     wakes = []
     armed = True          # rising-edge detector: re-arms once the room goes quiet
+    run = 0               # consecutive windows over threshold
     print(f"listening on {args.device}, threshold {THRESHOLD}, "
           f"cooldown {COOLDOWN_S}s, dry_run={args.dry_run}", flush=True)
     for rms, peak in _reader(args.device):
         if rms < THRESHOLD:
+            run = 0
             armed = True
+            continue
+        run += 1
+        if run < CONSECUTIVE:
             continue
         if not armed:
             continue
@@ -217,6 +230,11 @@ def cmd_watch(args):
             log_event(rms, peak, "suppressed_low_battery", f"{v} V")
             continue
 
+        # Log the detection BEFORE responding. The sweep takes ~40 s, and until
+        # 2026-08-30 nothing was written until it finished - so anyone watching
+        # the log during a response saw an empty file and concluded the robot
+        # had not heard them.
+        log_event(rms, peak, "detected", f"{v} V, responding")
         changed, detail = orient()
         if changed is False:
             # Looked, saw nothing. That IS the whole response - no session.
