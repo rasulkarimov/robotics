@@ -26,6 +26,7 @@ import math
 import os
 import subprocess
 import sys
+import threading
 import time
 import wave
 
@@ -134,7 +135,13 @@ def dwell(timeout=400):
 # roughly 1.8x realtime on this Pi 4 - measured, 9 s wall for a 5 s clip - so a
 # few seconds of audio is affordable once per event, and nothing like affordable
 # continuously.
-WHISPER_MODEL = "/home/astra/whisper-models/ggml-base-q5_1.bin"
+# small, not base. Measured 2026-08-30 on one real command, same audio file:
+#   base-q5_1  -> "Астра — дымни, сни, брост."      20.3 s
+#   small-q5_1 -> "Астра — подними синий брус."     36.0 s
+# Base could not reach the phrase even with the word in the vocabulary prompt.
+# A command that is transcribed wrong is worse than one that is slow: the
+# operator acts on it.
+WHISPER_MODEL = "/home/astra/whisper-models/ggml-small-q5_1.bin"
 PRE_ROLL_S = 2.0        # audio kept from BEFORE the trigger: a phrase starts
                         # before it gets loud enough to cross the threshold
 POST_ROLL_S = 3.0
@@ -179,7 +186,9 @@ def orient(timeout=180):
                            capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         return None, "orient timed out"
-    tail = [l for l in r.stdout.strip().splitlines() if l.strip()]
+    # The "camera is down" message goes to stderr, so reading stdout alone
+    # recorded a useful diagnosis as the useless string "no output".
+    tail = [l for l in (r.stdout + "\n" + r.stderr).strip().splitlines() if l.strip()]
     detail = tail[-1] if tail else "no output"
     if r.returncode == 0:
         return True, detail
@@ -344,19 +353,27 @@ def cmd_watch(args):
                 post.append(next(reader)[2])
             except StopIteration:
                 break
-        said = transcribe(pre, post)
+        # Transcribing and sweeping do not compete: one is CPU, the other is
+        # the arm and the camera. Run them together, or the robot spends 36 s
+        # listening to a recording before it starts turning its head.
+        heard = {}
+        t = threading.Thread(target=lambda: heard.update(text=transcribe(pre, post)),
+                             daemon=True)
+        t.start()
 
         # Log the detection BEFORE responding. The sweep takes ~40 s, and until
         # 2026-08-30 nothing was written until it finished - so anyone watching
         # the log during a response saw an empty file and concluded the robot
         # had not heard them.
-        log_event(rms, peak, "detected",
-                  f"{v} V, responding" + (f'; heard: "{said}"' if said else ""))
+        log_event(rms, peak, "detected", f"{v} V, responding")
+        changed, detail = orient()
+
+        t.join(timeout=240)
+        said = heard.get("text", "")
         if said:
             print(f'  heard: "{said}"', flush=True)
-        changed, detail = orient()
-        if changed is False:
-            # Looked, saw nothing. That IS the whole response - no session.
+        if changed is False and not said:
+            # Looked, saw nothing, heard no words. That IS the whole response.
             log_event(rms, peak, "oriented_nothing_seen", detail)
             print(f"event rms={rms:.0f} -> looked, nothing changed", flush=True)
             last_wake = now          # the look itself earns the cooldown

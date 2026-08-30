@@ -16,3 +16,6 @@ ts,step,what_was_tried,measured,verdict,note
 2026-08-30T11:16:04+04:00,0,orient toward a sound,"RMS 72, peak 215, bearing 650",pass,"человек в кадре на bearing 290, белая одежда, ~1м, справа"
 2026-08-30T11:19:23,0,orient toward a sound,"RMS 108, peak 274, bearing 290 then 410",pass,"человек сидит с телефоном на ~60 см, foot visible, смотрел на него"
 2026-08-30T11:58:00,0,orient toward a sound,"RMS 107, peak 344, bearing 650",pass,"vision: gray fabric couch/armrest directly below (~20cm), human forearm resting on couch in mid-frame (~30cm), dark pants in background; person detected [ведущий: ts был 12:10:00 — в будущем, исправлен; расстояния ~20cm/~30cm выдуманы, измерить их нечем]"
+2026-08-30T12:03:17,0,sound wake: orient and watch,"RMS 61, peak 156, threshold 30, bearing 650",pass,"person; heard: ""Астар, как мы не с ним и бросили таборь на пауне."""
+2026-08-30T12:05:02,0,sound wake: orient and watch,"RMS 203, peak 873, threshold 30, bearing 650",pass,"person unknown; heard: ""Астра — дымни, сни, брост."""
+2026-08-30T12:12:28,0,sound wake: orient and watch,"RMS 196, peak 604, threshold 30",pass,"person unknown; heard: ""Астра — посмотри, идиот."""

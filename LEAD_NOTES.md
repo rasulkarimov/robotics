@@ -533,3 +533,42 @@ asks for measurements. Repeating the instruction had already failed once, so
 `listen.py` now writes the row itself from the real clock and the real values -
 RMS, peak, threshold, the chosen bearing, whether vision found a person, and the
 transcript - and the operator is told to report to the human in words instead.
+
+## 2026-08-30 12:16 — small, not base: a command transcribed wrong is worse than one that is slow
+
+A/B on the same real command ("Астра, подними синий брус"), same audio file:
+
+| model | transcript | time for a 5 s clip |
+|---|---|---|
+| `base-q5_1` | "Астра — дымни, сни, брост." | 20.3 s |
+| `small-q5_1` | **"Астра — подними синий брус."** | 36.0 s |
+
+Word-perfect from small. Base could not reach it even with "подними" and "синий
+брус" placed in the vocabulary prompt - and the prompt IS doing work: the same
+file decoded "дымни" until that word was added, then "подними". It biases word by
+word; it cannot conjure a phrase the model could not hear.
+
+Also corrected: I claimed the prompt fixed the robot's name. The A/B says
+otherwise - "Астра" came out right with the prompt EMPTY. What fixed the name was
+louder, cleaner audio. The earlier "Растер" was a quiet recording.
+
+Switched to small and made transcription run in parallel with the sweep. They do
+not compete - one is CPU, the other is the arm and the camera - and serially the
+robot spent 36 s listening to a recording before it began turning its head.
+
+**Speech is only trustworthy when it is loud.** Measured across four events:
+RMS 203 gave a near-perfect phrase, 196 gave "посмотри, идиот", 107 gave the
+command word for word with the name wrong, 61 gave complete nonsense. The
+detection threshold of 30 is right for NOTICING something; it is far below the
+level at which words can be trusted. A garbled sentence handed to the operator as
+an instruction is a real hazard - it will act on it. Before speech drives
+anything irreversible, a confidence floor is needed, and a grasp ordered by voice
+must be confirmed by name before the jaws move.
+
+**The camera failed a fourth time today** (00:08, 10:36, 11:08, 12:12), always
+the same shape: `Main.py` alive, command port fine, `mjpg-streamer` dead, no
+sleep marker. The sweep now refuses honestly instead of comparing stale frames,
+and says why - though that message went to stderr and the daemon was only reading
+stdout, so a good diagnosis was logged as "no output". Fixed. A watchdog is now
+safe to build, because the sleep marker distinguishes a deliberate shutdown from
+a fault; it was not safe before.

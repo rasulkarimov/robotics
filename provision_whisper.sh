@@ -47,7 +47,9 @@ mkdir -p "$MODELS"
 if [[ -s $MODEL_FILE ]]; then
     echo "   already present: $MODEL_FILE ($(du -h "$MODEL_FILE" | cut -f1))"
 else
-    curl -fL --progress-bar -o "$MODEL_FILE.part" "$URL"
+    # -C - resumes: the small model is ~180 MB and one download was cut off
+    # partway on 2026-08-30, leaving a .part that a plain retry would discard.
+    curl -fL -C - --progress-bar -o "$MODEL_FILE.part" "$URL"
     mv "$MODEL_FILE.part" "$MODEL_FILE"
     echo "   downloaded: $(du -h "$MODEL_FILE" | cut -f1)"
 fi

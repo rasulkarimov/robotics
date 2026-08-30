@@ -8,7 +8,17 @@
 #   stt.sh <audio-file> [lang]     # lang defaults to ru, e.g. `stt.sh voice.oga en`
 set -euo pipefail
 
-MODEL="${WHISPER_MODEL:-/home/astra/whisper-models/ggml-tiny.bin}"
+MODEL="${WHISPER_MODEL:-/home/astra/whisper-models/ggml-base-q5_1.bin}"
+
+# Whisper guesses proper nouns from context, and it has no reason to expect this
+# one: "Астра, посмотри что справа" came back as "Растер. Посмотри, что справа",
+# with the command word-perfect and the name lost. An initial prompt biases the
+# decoder towards a vocabulary without retraining or changing model. Keep it
+# short - it is prepended to the context and competes with the audio for room.
+# Measured 2026-08-30 on one real command: with "подними" absent from this list
+# the audio decoded as "дымни"; adding it produced "подними" from the same file.
+# The bias is word by word, so the list has to name what is actually said.
+PROMPT="${WHISPER_PROMPT:-Астра — домашний робот. Команды: подними, возьми, положи, отпусти, посмотри, поверни, подъедь, стой. Предметы: синий брус, носок, коробка, зарядка, штекер, пол, стол, диван, балкон, окно.}"
 BIN=/home/astra/whisper.cpp/build/bin/whisper-cli
 [[ -x $BIN ]] || BIN=/home/astra/whisper.cpp/build/bin/main
 
@@ -23,5 +33,5 @@ WAV=$(mktemp --suffix=.wav)
 trap 'rm -f "$WAV"' EXIT
 ffmpeg -nostdin -loglevel error -y -i "$IN" -ar 16000 -ac 1 -c:a pcm_s16le "$WAV"
 
-"$BIN" -m "$MODEL" -f "$WAV" -l "$LANG_" -nt -np -t 4 2>/dev/null |
+"$BIN" -m "$MODEL" -f "$WAV" -l "$LANG_" -nt -np -t 4 --prompt "$PROMPT" 2>/dev/null |
   sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$'
