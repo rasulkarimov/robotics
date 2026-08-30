@@ -8,3 +8,6 @@ ts,step,what_was_tried,measured,verdict,note
 2026-08-29T18:35:47,5,"verify the drop from 20cm back","sock landed ON the near rim of the box, part hanging inside, part outside",fail,"release point was over the edge, not past it; the plan assumption that a box needs no precision is wrong for a soft object on a rim"
 2026-08-29T18:35:47,VIOLATION,my own,"backward 55/1.0s (19->39cm) run with NO safety.py preflight - lead broke the rule it paused Hermes for"
 2026-08-29 19:05:38, 4, sock_grasp_right_45deg, base=290/R=154/z=-75/stall=676, pass, wiggle_test_passed_norim
+step,voice_rms,voice_peak,event_type,event_note,timestamp
+0,417,1994,sound_detected,Microphone detected sound (RMS 417 > threshold 250),2026-08-30T10:49:05+04:00
+2026-08-30T10:51:09+04:00,0,sound_event,RMS=421,peak=1446,view=horizon,found=person in black shorts standing ~1.5m right side

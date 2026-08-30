@@ -367,3 +367,65 @@ that the streamer bound its port, and `health_log.py` does not record camera
 state at all, so nothing notices. For an unattended robot this means "alive but
 blind" is its normal failure mode. Proposed fix: a small watchdog that polls 8090
 and calls `restart-camera`, plus a camera column in the health log.
+
+## 2026-08-30 10:45 — correction: the camera was asleep, not broken
+
+The user says Hermes had put the robot into `car.py sleep` — power-save, which
+turns the arm torque off and the camera off deliberately. So my note above is
+wrong: port 8090 was not failing, it was **switched off on purpose**, and both
+times I "fixed" it I was overriding a power-saving decision on a shared battery.
+
+Worse, the watchdog I proposed would have been actively harmful: polling 8090 and
+calling `restart-camera` would fight every sleep the operator ever takes, and
+would drain exactly the pack that sleep exists to protect.
+
+The mistake in reasoning is the one I have been correcting in Hermes all day:
+I saw an observation (port refused), reached for the failure explanation, and did
+not check the deliberate-action explanation first. `car.py status` cannot tell
+"broken" from "asleep" — that is worth fixing in the tool, so the next reader is
+not misled the way I was. A watchdog, if one is ever wanted, must know the
+difference and leave a sleeping robot alone.
+
+## 2026-08-30 11:0x — orienting toward a noise, with a mono microphone
+
+The user wants the robot to turn its gaze toward a sound and watch the source,
+"like an animal, a child, or a person". Built as far as the hardware allows,
+with the seam left open for the stereo microphone they plan to fit.
+
+**The hard constraint, checked rather than assumed:** ALSA reports the camera's
+capsule as `Channels: 1, Channel map: MONO` at 48 kHz. One capsule carries no
+time-of-arrival difference, so no software can localise a sound with it. A
+second microphone at ~15 cm would give up to ~0.44 ms, about 21 samples at
+48 kHz - enough for a coarse left/centre/right. `orient.bearing_from_audio()`
+exists precisely as that seam and returns None today.
+
+**So the robot does what an animal with poor ear-localisation does: sweeps, and
+looks for what changed.** `orient.py` keeps a baseline of the quiet room across
+seven bearings and, on a noise, re-shoots them and points at whatever differs
+most. `watch` then dwells and reports movement until it goes still for three
+frames - habituation, because a curtain in a draught should stop being
+interesting and staring at it costs a shared battery.
+
+The reflex runs BEFORE the operator: `listen.py` sweeps locally (~10 s, no model
+call) and only wakes Hermes when something visibly changed. Ears, then eyes,
+then brain. A noise with nothing behind it now costs a look instead of a session.
+
+Three things measurement caught that guessing would not have:
+
+- **A flat 700 ms settle photographs the arm still moving.** A 600-unit swing
+  blurred into a change of 13.2, above the threshold - a phantom event on every
+  sweep that started from the far side. Settle now scales with the swing.
+- **Every bearing changing at once means the ROBOT moved, not the room.** The
+  same spot re-shot reads 1-5 per bearing; after the robot was moved, all seven
+  read 42-74. That is now named as a stale baseline instead of reported as an
+  event seven times over.
+- **One threshold does not fit every direction.** Bearings facing the balcony
+  window wobble on auto-exposure; dark corners do not. Each bearing now carries
+  its own floor, measured over two full passes - a back-to-back probe claimed
+  0.2 for a bearing that really varies by 15.1, and that bearing then flagged on
+  every quiet sweep. Ranking is by margin over each bearing's own floor, not by
+  raw change, since the noisiest bearing was otherwise always "the winner".
+
+A quiet room now sweeps clean: every bearing under its own floor, verdict
+"nothing has changed". The true-positive case still needs a live test with
+something actually moving.

@@ -1,0 +1,22 @@
+{
+  "taken": "2026-08-30T10:52:30",
+  "shape": "3:237,4:843,5:780",
+  "frames": {
+    "170": "/home/astra/robotics/nav_state/room_baseline/b170.jpg",
+    "290": "/home/astra/robotics/nav_state/room_baseline/b290.jpg",
+    "410": "/home/astra/robotics/nav_state/room_baseline/b410.jpg",
+    "470": "/home/astra/robotics/nav_state/room_baseline/b470.jpg",
+    "530": "/home/astra/robotics/nav_state/room_baseline/b530.jpg",
+    "650": "/home/astra/robotics/nav_state/room_baseline/b650.jpg",
+    "770": "/home/astra/robotics/nav_state/room_baseline/b770.jpg"
+  },
+  "self_noise": {
+    "170": 15.07,
+    "290": 2.08,
+    "410": 0.68,
+    "470": 1.29,
+    "530": 3.99,
+    "650": 0.85,
+    "770": 5.02
+  }
+}

@@ -442,6 +442,14 @@ ARM_PY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "arm.py")
 VENV_PY = "/home/astra/tools/venv/bin/python3"
 
 
+# A sleeping robot and a broken one look identical from outside: Main.py alive,
+# port 8090 refusing. On 2026-08-30 that cost a wrong diagnosis and two camera
+# restarts that overrode a deliberate power-saving decision. The marker lets
+# `status` tell the difference.
+SLEEP_MARKER = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            ".asleep")
+
+
 def stop_camera():
     """Kill mjpg-streamer without touching Main.py, so the command port stays up."""
     pids = subprocess.run(["pgrep", "mjpg_streamer"],
@@ -474,6 +482,8 @@ def power_save():
                        capture_output=True, text=True)
     print(f"arm: {r.stdout.strip() or r.stderr.strip()}")
     stop_camera()
+    with open(SLEEP_MARKER, "w") as f:
+        f.write(time.strftime("%Y-%m-%dT%H:%M:%S") + "\n")
     r = subprocess.run(["sudo", VENV_PY, ARM_PY, "battery"],
                        capture_output=True, text=True)
     if r.stdout.strip():
@@ -483,8 +493,21 @@ def power_save():
 
 def wake():
     """Come back from power_save: relaunch the camera (server was never stopped)."""
+    try:
+        os.remove(SLEEP_MARKER)
+    except FileNotFoundError:
+        pass
     restart_camera()
     status()
+
+
+def asleep_since():
+    """Timestamp string if the robot was deliberately put to sleep, else None."""
+    try:
+        with open(SLEEP_MARKER) as f:
+            return f.read().strip() or "unknown time"
+    except FileNotFoundError:
+        return None
 
 
 def status():
@@ -507,8 +530,16 @@ def status():
             data = r.read()
         print(f"camera port {CAMERA_PORT}: OK ({len(data)} bytes)")
     except Exception as e:
-        ok = False
-        print(f"camera port {CAMERA_PORT}: FAIL ({e})")
+        nap = asleep_since()
+        if nap:
+            # Not a fault: `sleep` killed mjpg-streamer on purpose. Do not
+            # "fix" this with a restart - it overrides a power-saving decision
+            # on a battery the Pi shares.
+            print(f"camera port {CAMERA_PORT}: OFF - robot is ASLEEP since {nap} "
+                  f"(deliberate, `car.py wake` to bring it back)")
+        else:
+            ok = False
+            print(f"camera port {CAMERA_PORT}: FAIL ({e})")
     proc = subprocess.run(["pgrep", "-af", "Main.py"], capture_output=True, text=True)
     if proc.stdout.strip():
         print(f"Main.py process: {proc.stdout.strip()}")

@@ -99,16 +99,44 @@ def log_event(rms, peak, action, detail=""):
                     action, detail])
 
 
-def wake_hermes(rms, peak):
+def orient(timeout=180):
+    """Reflex before thought: sweep and see whether anything actually changed.
+
+    Ears, then eyes, then brain - in that order, the way an animal does it. The
+    sweep is local, takes about ten seconds and costs no model call, so a noise
+    with nothing behind it (a door two rooms away, a car outside) is answered
+    with a look and nothing more. Only a noise that came with a visible change
+    is worth the operator's time and the battery a session costs.
+
+    Returns (changed, detail).
+    """
+    try:
+        r = subprocess.run(["python3", "orient.py", "look"], cwd=REPO,
+                           capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return None, "orient timed out"
+    tail = [l for l in r.stdout.strip().splitlines() if l.strip()]
+    detail = tail[-1] if tail else "no output"
+    if r.returncode == 0:
+        return True, detail
+    if r.returncode == 1:
+        return False, detail
+    if r.returncode == 3:
+        return "stale", detail   # the robot was moved; the baseline means nothing
+    return None, detail          # no baseline, or the sweep failed
+
+
+def wake_hermes(rms, peak, seen=""):
     """Hand the operator a bounded task. It is told NOT to drive: a noise is a
     reason to look, never a reason to move something it has not checked."""
     prompt = (
         f"Событие: микрофон робота зафиксировал звук (RMS {rms:.0f}, пик {peak}, "
-        f"порог {THRESHOLD:.0f}, тишина в комнате даёт около 11).\n\n"
-        "Осмотрись и доложи, что происходит. Порядок:\n"
-        "1. nav.py lookout --view horizon --snapshot /tmp/sound_look.jpg — "
-        "посмотри на комнату (наклон руками не подбирай).\n"
-        "2. python3 vision.py describe /tmp/sound_look.jpg — что видно.\n"
+        f"порог {THRESHOLD:.0f}, тишина в комнате даёт около 11).\n"
+        f"Рефлекс уже отработал: {seen}\n"
+        "Кадр с этого азимута лежит в /tmp/orient_target.jpg.\n\n"
+        "Посмотри и доложи, что происходит. Порядок:\n"
+        "1. python3 vision.py describe /tmp/orient_target.jpg — что видно.\n"
+        "2. Нужно понаблюдать — python3 orient.py watch (сам вернёт руку в home).\n"
         "3. Если в кадре человек — поздоровайся и спроси, нужно ли что-то.\n\n"
         "ШАССИ НЕ ДВИГАТЬ. Звук — повод посмотреть, а не повод ехать. "
         "Если считаешь, что нужно движение — доложи и жди указания.\n"
@@ -183,7 +211,22 @@ def cmd_watch(args):
             log_event(rms, peak, "suppressed_low_battery", f"{v} V")
             continue
 
-        if wake_hermes(rms, peak):
+        changed, detail = orient()
+        if changed is False:
+            # Looked, saw nothing. That IS the whole response - no session.
+            log_event(rms, peak, "oriented_nothing_seen", detail)
+            print(f"event rms={rms:.0f} -> looked, nothing changed", flush=True)
+            last_wake = now          # the look itself earns the cooldown
+            continue
+        if changed == "stale":
+            log_event(rms, peak, "baseline_stale", detail)
+            print("event -> baseline stale (robot was moved); not waking", flush=True)
+            last_wake = now
+            continue
+        if changed is None:
+            log_event(rms, peak, "orient_failed", detail)
+
+        if wake_hermes(rms, peak, detail):
             last_wake = now
             wakes.append(now)
             log_event(rms, peak, "woke_hermes", f"{v} V")
