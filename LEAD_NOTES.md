@@ -495,3 +495,41 @@ later. Under json_mode an empty content means the budget ran out before the
 object started - it is not a negative answer, and `watch` was right to report
 "unknown" rather than invent one. Now 6000 with a retry at 9000; three
 consecutive runs answered `found: true`, high confidence, adjacent cells.
+
+## 2026-08-30 12:00 — the robot hears words now; and the log had to be taken away from the operator
+
+**whisper.cpp is back and the chain is complete.** Built from ggml-org/whisper.cpp
+with `ggml-base-q5_1` (57 MB, multilingual because the speech is Russian).
+Measured on our own audio: a 5 s clip transcribes in **9 s** wall, 28 s CPU
+across four threads - about 1.8x realtime, fine for short phrases and hopeless
+for anything continuous. Installed through `provision_whisper.sh`, idempotent
+and in the repo, because this was the THIRD asset to vanish on a rebuild after
+the venv and mjpg-streamer.
+
+`listen.py` now keeps 2 s of audio from BEFORE the trigger and 3 s after - a
+phrase starts before it gets loud enough to cross the threshold - and transcribes
+it before the sweep, which is noisy and takes 40 s.
+
+**First live sentence, end to end:** the user said "Астра, посмотри что справа от
+тебя". The robot heard *"Растер. Посмотри, что справа к тебе."* - the command
+transcribed correctly word for word, "от тебя" came out as "к тебе", and the name
+failed. Then it swept, held bearing 650 for 12 frames with a person confirmed,
+and woke the operator with the transcript. It looked right, and the user was on
+the right.
+
+Two things to fix, both named rather than hidden: **110 seconds** from the
+sentence to the operator being woken - the transcription is 9 s of that, the rest
+is the sweep and the ~60 s person question, which should move to after the wake
+rather than before it. And whisper mishears the robot's own name, which matters
+if "Астра" is ever to be a wake word; whisper.cpp takes an initial `--prompt`
+that can carry the vocabulary.
+
+**The log is no longer written by the operator.** Four consecutive runs invented
+distances - "20-40 см", "~1 м", "~60 см", "~20cm" - and the fourth came after an
+explicit ban on writing distances at all. The same run stamped its row 12:10:00
+while the clock read 11:59:43, eleven minutes in the future. The content was
+honest each time; what was invented were the numbers, written into a column that
+asks for measurements. Repeating the instruction had already failed once, so
+`listen.py` now writes the row itself from the real clock and the real values -
+RMS, peak, threshold, the chosen bearing, whether vision found a person, and the
+transcript - and the operator is told to report to the human in words instead.

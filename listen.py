@@ -20,12 +20,14 @@ mjpg-streamer on port 8090 - verified while the camera was streaming.
 """
 import argparse
 import array
+import collections
 import csv
 import math
 import os
 import subprocess
 import sys
 import time
+import wave
 
 REPO = os.path.dirname(os.path.abspath(__file__))
 LOG = os.path.join(REPO, "sound_log.csv")
@@ -72,7 +74,8 @@ def _reader(device=DEVICE):
                 return
             a = array.array("h")
             a.frombytes(buf)
-            yield math.sqrt(sum(x * x for x in a) / len(a)), max(abs(min(a)), abs(max(a)))
+            yield (math.sqrt(sum(x * x for x in a) / len(a)),
+                   max(abs(min(a)), abs(max(a))), buf)
     finally:
         p.terminate()
         try:
@@ -126,6 +129,40 @@ def dwell(timeout=400):
     return (r.stdout.strip().splitlines() or ["watch produced nothing"])[-1]
 
 
+# Speech is the point of hearing at all. A loud noise says something happened;
+# a transcript says what was wanted. whisper.cpp with ggml-base-q5_1 runs at
+# roughly 1.8x realtime on this Pi 4 - measured, 9 s wall for a 5 s clip - so a
+# few seconds of audio is affordable once per event, and nothing like affordable
+# continuously.
+WHISPER_MODEL = "/home/astra/whisper-models/ggml-base-q5_1.bin"
+PRE_ROLL_S = 2.0        # audio kept from BEFORE the trigger: a phrase starts
+                        # before it gets loud enough to cross the threshold
+POST_ROLL_S = 3.0
+
+
+def transcribe(pre, post, path="/tmp/heard.wav"):
+    """Write the audio around an event and return what was said, or ''."""
+    try:
+        with wave.open(path, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(RATE)
+            w.writeframes(b"".join(list(pre) + post))
+    except Exception as e:
+        return f"(could not write audio: {e})"
+    try:
+        r = subprocess.run(["./stt.sh", path, "ru"], cwd=REPO,
+                           capture_output=True, text=True, timeout=180,
+                           env={**os.environ, "WHISPER_MODEL": WHISPER_MODEL})
+    except subprocess.TimeoutExpired:
+        return "(transcription timed out)"
+    text = " ".join(r.stdout.split())
+    # whisper marks non-speech like this; it is an answer, not a failure.
+    if text in ("[музыка]", "[Music]", "[BLANK_AUDIO]", ""):
+        return ""
+    return text
+
+
 def orient(timeout=180):
     """Reflex before thought: sweep and see whether anything actually changed.
 
@@ -153,13 +190,52 @@ def orient(timeout=180):
     return None, detail          # no baseline, or the sweep failed
 
 
-def wake_hermes(rms, peak, seen=""):
+def log_training_row(rms, peak, seen, said, watched):
+    """Write the training-log row ourselves, from what was actually measured.
+
+    Asking the operator to write it did not work. Four runs in a row invented
+    distances - "20-40 см", "~1 м", "~60 см", "~20cm" - and the last of those
+    came AFTER an explicit ban on writing distances at all; the same run also
+    stamped the row 12:10 while the clock said 11:59. None of it was malice: it
+    was writing a report from an impression, in a column that asks for
+    measurements.
+    #
+    # So the opportunity is removed rather than the instruction repeated. This
+    # process has the real clock and the real numbers - RMS, peak, threshold,
+    # the bearing the sweep chose, whether vision found a person, and the
+    # transcript - so it writes the row, and the operator is told to report to
+    # the human instead.
+    """
+    person = "person" if ", person," in watched else (
+        "no person" if ", no person," in watched else "person unknown")
+    bearing = ""
+    for tok in seen.replace("(", " ").replace(")", " ").split():
+        if tok.isdigit() and len(tok) == 3:
+            bearing = f", bearing {tok}"
+            break
+    note = person + (f'; heard: "{said}"' if said else "; no speech")
+    row = [time.strftime("%Y-%m-%dT%H:%M:%S"), "0",
+           "sound wake: orient and watch",
+           f"RMS {rms:.0f}, peak {peak}, threshold {THRESHOLD:.0f}{bearing}",
+           "pass", note]
+    path = os.path.join(REPO, "training_log.csv")
+    try:
+        with open(path, "a", newline="") as f:
+            csv.writer(f).writerow(row)
+    except Exception as e:
+        log_event(rms, peak, "training_log_write_failed", str(e)[:120])
+
+
+def wake_hermes(rms, peak, seen="", said=""):
     """Hand the operator a bounded task. It is told NOT to drive: a noise is a
     reason to look, never a reason to move something it has not checked."""
     prompt = (
         f"Событие: микрофон робота зафиксировал звук (RMS {rms:.0f}, пик {peak}, "
         f"порог {THRESHOLD:.0f}, тишина в комнате даёт около 11).\n"
         f"Рефлекс уже отработал: {seen}\n"
+        + (f'РАСПОЗНАННАЯ РЕЧЬ: "{said}"\nЕсли это просьба — выполни её или '
+           f"скажи, что мешает.\n" if said else "")
+        +
         "Кадр с этого азимута лежит в /tmp/orient_target.jpg.\n\n"
         "Посмотри и доложи, что происходит. Порядок:\n"
         "1. python3 vision.py describe /tmp/orient_target.jpg — что видно.\n"
@@ -168,7 +244,9 @@ def wake_hermes(rms, peak, seen=""):
         "3. Если в кадре человек — поздоровайся и спроси, нужно ли что-то.\n\n"
         "ШАССИ НЕ ДВИГАТЬ. Звук — повод посмотреть, а не повод ехать. "
         "Если считаешь, что нужно движение — доложи и жди указания.\n"
-        "Запиши строку в training_log.csv. ФОРМАТ СТРОГИЙ, 6 колонок в этом "
+        "В training_log.csv НЕ ПИШИ — строку уже записал демон, у него есть "
+        "часы и измерения. Доложи человеку словами.\n"
+        "(справочно, формат файла: 6 колонок в этом "
         "порядке, свой заголовок НЕ добавляй:\n"
         "ts,step,what_was_tried,measured,verdict,note\n"
         "step — НОМЕР ступени (пробуждение по звуку = 0), не слово. "
@@ -193,7 +271,7 @@ def wake_hermes(rms, peak, seen=""):
 def cmd_levels(args):
     print(f"device {args.device}, window {WINDOW}s, threshold {THRESHOLD}")
     print("rms      peak    bar")
-    for rms, peak in _reader(args.device):
+    for rms, peak, _ in _reader(args.device):
         bar = "#" * min(60, int(rms / 40))
         print(f"{rms:7.1f} {peak:6d}  {bar}")
 
@@ -201,7 +279,7 @@ def cmd_levels(args):
 def cmd_calibrate(args):
     vals = []
     t0 = time.time()
-    for rms, _ in _reader(args.device):
+    for rms, _, _ in _reader(args.device):
         vals.append(rms)
         if time.time() - t0 >= args.seconds:
             break
@@ -219,9 +297,12 @@ def cmd_watch(args):
     wakes = []
     armed = True          # rising-edge detector: re-arms once the room goes quiet
     run = 0               # consecutive windows over threshold
+    pre = collections.deque(maxlen=int(PRE_ROLL_S / WINDOW))
     print(f"listening on {args.device}, threshold {THRESHOLD}, "
           f"cooldown {COOLDOWN_S}s, dry_run={args.dry_run}", flush=True)
-    for rms, peak in _reader(args.device):
+    reader = _reader(args.device)
+    for rms, peak, buf in reader:
+        pre.append(buf)
         if rms < THRESHOLD:
             run = 0
             armed = True
@@ -255,11 +336,24 @@ def cmd_watch(args):
             log_event(rms, peak, "suppressed_low_battery", f"{v} V")
             continue
 
+        # Catch the tail of whatever is being said before turning to look: the
+        # arm sweep is noisy and takes 40 s, by which time the sentence is gone.
+        post = []
+        for _ in range(int(POST_ROLL_S / WINDOW)):
+            try:
+                post.append(next(reader)[2])
+            except StopIteration:
+                break
+        said = transcribe(pre, post)
+
         # Log the detection BEFORE responding. The sweep takes ~40 s, and until
         # 2026-08-30 nothing was written until it finished - so anyone watching
         # the log during a response saw an empty file and concluded the robot
         # had not heard them.
-        log_event(rms, peak, "detected", f"{v} V, responding")
+        log_event(rms, peak, "detected",
+                  f"{v} V, responding" + (f'; heard: "{said}"' if said else ""))
+        if said:
+            print(f'  heard: "{said}"', flush=True)
         changed, detail = orient()
         if changed is False:
             # Looked, saw nothing. That IS the whole response - no session.
@@ -280,7 +374,8 @@ def cmd_watch(args):
         watched = dwell()
         print(f"  {watched}", flush=True)
 
-        if wake_hermes(rms, peak, f"{detail}; {watched}"):
+        log_training_row(rms, peak, detail, said, watched)
+        if wake_hermes(rms, peak, f"{detail}; {watched}", said):
             last_wake = now
             wakes.append(now)
             log_event(rms, peak, "woke_hermes", f"{v} V")

@@ -216,6 +216,13 @@ entry:
 
 ## Writing results down
 
+**Sound-wake rows are written by `listen.py` itself, not by you** — it holds the
+clock and the measurements. Four runs in a row invented distances there, the last
+of them after an explicit ban, and one stamped a row eleven minutes in the
+future. That is not dishonesty, it is writing a report from an impression into a
+column that asks for measurements; the fix is to take the pen away rather than
+repeat the instruction. For everything you DO log:
+
 `training_log.csv` has SIX columns in this order and exactly one header line,
 at the top, written once:
 
