@@ -221,6 +221,12 @@ at the top, written once:
 
     ts,step,what_was_tried,measured,verdict,note
 
+`step` is a LADDER NUMBER, 0-6, never a word: a sound wake is step 0, a grasp is
+step 4. `measured` holds only quantities something actually measured. A distance
+you judged by eye is not a measurement - the sonar faces forward and cannot see
+the bearing the arm is looking at, and the wrist camera has no depth at all - so
+an estimate goes in `note` with the word "оценка"/"estimate" attached.
+
 Never append a second header, and never reorder the columns. On 2026-08-30 a run
 wrote its own header mid-file plus rows in two different layouts; the file stopped
 parsing and the lead had to repair it by hand. It is the shared evidence base -
