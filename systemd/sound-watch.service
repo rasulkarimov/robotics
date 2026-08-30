@@ -1,0 +1,19 @@
+[Unit]
+Description=Wake the robot operator on a room noise (USB camera microphone)
+After=car-server.service
+Wants=car-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/astra/robotics
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/home/astra/.local/bin
+# The threshold is calibrated against a measured floor: a silent room gives an
+# RMS around 12, a clap beside the robot gives 1373. 250 sits between them with
+# more than an order of magnitude of margin on each side. `listen.py calibrate`
+# re-measures the floor if the room changes.
+ExecStart=/usr/bin/python3 /home/astra/robotics/listen.py watch
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -33,3 +33,6 @@ nav_state/pose.json
 
 # rotated pty transcript (the *.log rule does not cover .log.1)
 claude_remote_transcript.log.*
+
+# One row per sound event; telemetry like the others
+sound_log.csv

@@ -334,3 +334,36 @@ should either check 8090 after start, or something should watch it, otherwise
 blind". Filed here rather than patched now, at midnight, with training paused.
 
 Battery reads **7.753 V**, up from 7.107 — it has been on the charger.
+
+## 2026-08-30 10:36 — the robot can hear, and the camera keeps dying
+
+**Sound reaction built (ladder step 0 territory).** `listen.py` + a user unit
+`sound-watch.service`, enabled and running.
+
+The numbers it is calibrated against, all measured today: a silent room gives
+RMS **11.6** (p95 15.3, max 18.1 over 79 windows); a clap plus a spoken phrase
+beside the robot gave peak **27107** — near the 32767 ceiling — with a 0.2 s
+window RMS of **1373**. Two orders of magnitude between floor and event, so the
+threshold sits at 250 and needs no adaptive cleverness. Costs **0.7% CPU**.
+
+Guards, because a noise must not become a stampede: rising-edge detection that
+re-arms only when the room goes quiet, a 60 s cooldown, at most 6 wakes an hour,
+and no wake at all below 6.9 V — the operator cannot recharge itself yet. Every
+event gets a row in `sound_log.csv` whether it woke anything or not. The wake
+prompt tells Hermes to LOOK, not to drive.
+
+Also found: **whisper.cpp and its model are gone from the disk** — third item in
+the pattern where a built binary or downloaded asset outside git vanishes on a
+rebuild. `stt.sh` is committed and correct; it just has nothing to run. So the
+robot can notice a noise but cannot yet hear what was said.
+
+**The camera failed again, on its own.** I restarted it at 00:08 after the
+reboot; by 10:36 port 8090 was refusing connections again, with `Main.py` alive
+and the command port fine. Verified it is NOT the new microphone daemon: after
+`car.py restart-camera` both run together happily through a soak. So this is the
+gap flagged at 00:08 recurring, which makes it an ongoing fault rather than a
+boot race — `car-server.service` restarts the server process and never checks
+that the streamer bound its port, and `health_log.py` does not record camera
+state at all, so nothing notices. For an unattended robot this means "alive but
+blind" is its normal failure mode. Proposed fix: a small watchdog that polls 8090
+and calls `restart-camera`, plus a camera column in the health log.
