@@ -655,3 +655,35 @@ Two attempts at 128.5 and 130.2 mm also contradict the skill's "keep R >= 140"
 rule and nothing snagged. Either the rule is stricter than the hardware, or the
 bracket is out of the way at these bearings. Worth measuring rather than
 assuming, once the arm is free.
+
+## 2026-08-30 13:57 — the camera is off the USB bus. Hardware, not software.
+
+The drill's second run failed 10 reps out of 10 on `arm step` exit 1. Hermes
+diagnosed it correctly and stopped rather than thrashing: the camera is gone.
+Verified independently:
+
+- `lsusb` no longer lists `349c:3307` at all - only the hub, the arm and the
+  root hubs remain.
+- `/dev/video0` is gone; only the Pi's internal codec nodes are left.
+- `dmesg`: `usb 1-1.3: Device not responding to setup address` and `device not
+  accepting address 9, error -71`, repeating. That is an enumeration failure at
+  the USB level - a bad contact, sagging power or a dying camera, not a wedged
+  process.
+
+`arm step` fails because it takes a snapshot as part of every move, so with no
+camera the whole grasp pipeline is blind and every rep dies instantly.
+
+The camera watchdog is behaving exactly as designed: it detects, retries, and
+logs `restart_failed` each time, because it cannot restart a device that is not
+on the bus. It gives up after six attempts an hour with "needs a person", which
+is the right answer here.
+
+**This needs hands: check the camera's USB connector and its power.** Today's
+four earlier camera deaths - 00:08, 10:36, 11:08, 12:12 - now read differently.
+They were probably the same fault escalating, not four independent software
+hiccups.
+
+Step 4 stands as passed on the seven clean grasps before this; the drill's later
+failures are excluded as a dead camera, the same way the earlier three were
+excluded as USB contention. Both exclusions are logged rather than quietly
+dropped.
