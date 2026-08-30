@@ -216,6 +216,16 @@ entry:
 
 ## Writing results down
 
+`training_log.csv` has SIX columns in this order and exactly one header line,
+at the top, written once:
+
+    ts,step,what_was_tried,measured,verdict,note
+
+Never append a second header, and never reorder the columns. On 2026-08-30 a run
+wrote its own header mid-file plus rows in two different layouts; the file stopped
+parsing and the lead had to repair it by hand. It is the shared evidence base -
+a log that cannot be read proves nothing.
+
 Append one row per attempt to `training_log.csv` — including the attempts that
 found nothing, and including work done outside a cron run (a scout over Telegram
 is still an attempt). On 2026-08-29 a full scouting session left no row at all
