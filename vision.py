@@ -228,8 +228,16 @@ def find(path, target, save_grid=None):
         "helpful - a false sighting is worse than a miss."
     )
     # Localising costs far more reasoning than describing: the model walks the
-    # grid cell by cell. 1500 tokens truncated a positive answer in testing.
-    raw = _post(_user(prompt, grid), max_tokens=3500, json_mode=True)
+    # grid cell by cell, and the reasoning is billed against max_tokens even
+    # though it lands in a separate field. 1500 truncated a positive answer;
+    # 3500 turned out to be marginal rather than enough - measured 2026-08-30,
+    # the same question on the same frame answered correctly once and then came
+    # back with an EMPTY content twice in a row minutes later. An empty content
+    # under json_mode means the budget ran out before the object started, so the
+    # answer is retried once with more room rather than reported as "not found".
+    raw = _post(_user(prompt, grid), max_tokens=6000, json_mode=True)
+    if not raw.strip():
+        raw = _post(_user(prompt, grid), max_tokens=9000, json_mode=True)
     obj = _json_from(raw)
     if obj is None:
         return {"found": False, "cx": None, "cy": None, "cell": None,

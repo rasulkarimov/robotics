@@ -463,3 +463,35 @@ sofa bearings fell from 24.5 and 26.1 to 0.8 and 1.1 - the still person became
 uninteresting - while the bearing where someone was walking rose to 22.4, and
 the frame there shows a person mid-stride. The baseline is still used, but only
 for the "have I been moved?" question, which is what it is actually good for.
+
+## 2026-08-30 11:40 — the robot now keeps a person in view
+
+The user asked why the robot was not watching them while they sat to its right.
+Three reasons, all mine, all now fixed.
+
+It only ever ran `orient.py look` - turn, report, return to neutral. Looking and
+then leaving a second later is a twitch, not an orienting response. The reflex
+now runs `watch` as well, and only then wakes the operator, with the outcome
+already in hand.
+
+And the fix the user asked for earlier had overshot: comparing each sweep with
+the previous one made a still person deliberately uninteresting, which cured the
+staring and replaced it with indifference. A person is not a curtain. `watch` now
+asks the vision model ONCE whether a person is there, and if so holds the bearing
+for a set time regardless of stillness.
+
+**Verified live just now:** oriented to bearing 650 (change 25.8), the vision
+model confirmed a person, and it then held that bearing through **16 consecutive
+still frames** - motion 0.3 to 3.6, every one below the moving threshold - before
+releasing on the time budget. Under the old rule it would have looked away after
+three still frames, about five seconds. The final frame shows the person on the
+sofa with a phone, so the gaze was genuinely on them the whole time.
+
+**The person check had been failing silently, and the cause corrects an old
+note.** `vision.py find` ran at max_tokens 3500, recorded in memory as "what
+find needs". It is the margin, not the requirement: the same question on the
+same frame answered correctly and then returned an EMPTY content twice minutes
+later. Under json_mode an empty content means the budget ran out before the
+object started - it is not a negative answer, and `watch` was right to report
+"unknown" rather than invent one. Now 6000 with a retry at 9000; three
+consecutive runs answered `found: true`, high confidence, adjacent cells.

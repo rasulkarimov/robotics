@@ -107,6 +107,25 @@ def log_event(rms, peak, action, detail=""):
                     action, detail])
 
 
+def dwell(timeout=400):
+    """Stay with whatever the sweep found, instead of glancing and walking away.
+
+    Added 2026-08-30 after the user asked why the robot was not watching them:
+    the reflex was only ever calling `look`, so it turned, reported and went back
+    to neutral. Looking and then losing interest a second later is not an
+    orienting response, it is a twitch.
+    """
+    try:
+        r = subprocess.run(["python3", "orient.py", "watch"], cwd=REPO,
+                           capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return "watch timed out"
+    for line in reversed(r.stdout.strip().splitlines()):
+        if line.startswith("WATCHED"):
+            return line
+    return (r.stdout.strip().splitlines() or ["watch produced nothing"])[-1]
+
+
 def orient(timeout=180):
     """Reflex before thought: sweep and see whether anything actually changed.
 
@@ -144,7 +163,8 @@ def wake_hermes(rms, peak, seen=""):
         "Кадр с этого азимута лежит в /tmp/orient_target.jpg.\n\n"
         "Посмотри и доложи, что происходит. Порядок:\n"
         "1. python3 vision.py describe /tmp/orient_target.jpg — что видно.\n"
-        "2. Нужно понаблюдать — python3 orient.py watch (сам вернёт руку в home).\n"
+        "Наблюдение УЖЕ проведено рефлексом — orient.py watch повторно не "
+        "запускай, рука уже вернулась в home.\n"
         "3. Если в кадре человек — поздоровайся и спроси, нужно ли что-то.\n\n"
         "ШАССИ НЕ ДВИГАТЬ. Звук — повод посмотреть, а не повод ехать. "
         "Если считаешь, что нужно движение — доложи и жди указания.\n"
@@ -152,9 +172,10 @@ def wake_hermes(rms, peak, seen=""):
         "порядке, свой заголовок НЕ добавляй:\n"
         "ts,step,what_was_tried,measured,verdict,note\n"
         "step — НОМЕР ступени (пробуждение по звуку = 0), не слово. "
-        "В measured — только измеренное; расстояние на глаз измерением не "
-        "является (сонар смотрит вперёд, у камеры глубины нет) — такое в note "
-        "со словом «оценка».\n"
+        "В measured — только измеренное. РАССТОЯНИЕ НЕ ПИШИ ВООБЩЕ: измерить "
+        "его на этом азимуте нечем (сонар смотрит вперёд, у камеры глубины нет). "
+        "Описывай ЧТО видишь и ГДЕ в кадре. Дистанция допустима только рядом с "
+        "показанием car.py ultrasonic.\n"
         "Пример: 2026-08-30T10:51:09,0,\"orient toward a sound\","
         "\"RMS 421, peak 1446\",pass,\"человек справа в 1.5 м\"\n"
         "Файл — общая доказательная база; вторая раскладка колонок ломает разбор "
@@ -254,7 +275,12 @@ def cmd_watch(args):
         if changed is None:
             log_event(rms, peak, "orient_failed", detail)
 
-        if wake_hermes(rms, peak, detail):
+        # Reflex first, and see it through: turn, then stay with it. Only then
+        # is there anything worth telling the operator.
+        watched = dwell()
+        print(f"  {watched}", flush=True)
+
+        if wake_hermes(rms, peak, f"{detail}; {watched}"):
             last_wake = now
             wakes.append(now)
             log_event(rms, peak, "woke_hermes", f"{v} V")

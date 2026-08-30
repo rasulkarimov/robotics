@@ -225,7 +225,13 @@ at the top, written once:
 step 4. `measured` holds only quantities something actually measured. A distance
 you judged by eye is not a measurement - the sonar faces forward and cannot see
 the bearing the arm is looking at, and the wrist camera has no depth at all - so
-an estimate goes in `note` with the word "оценка"/"estimate" attached.
+**do not write a distance at all.** Asking for an "estimate" tag did not work -
+three runs in a row wrote "20-40 см", "~1 м", "~60 см" as though they were
+observations. The robot has no way to measure the distance to something the arm
+is pointed at: the sonar faces forward and cannot see that bearing, and the wrist
+camera has no depth. So a distance may only appear when a `car.py ultrasonic`
+reading is quoted beside it. Otherwise describe WHAT you see and WHERE in the
+frame, and leave distance out.
 
 Never append a second header, and never reorder the columns. On 2026-08-30 a run
 wrote its own header mid-file plus rows in two different layouts; the file stopped

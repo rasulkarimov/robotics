@@ -247,6 +247,33 @@ def cmd_look(args):
     return 0
 
 
+def is_person(frame, timeout=200):
+    """Is there a person in this frame? None when the question could not be answered.
+
+    Costs about a minute, so it is asked ONCE per watch and never per frame.
+    Parses the JSON body rather than the exit code: vision.py exits 2 both for
+    "not there" and for a reply it could not read.
+    """
+    try:
+        r = subprocess.run(["python3", "vision.py", "find", frame,
+                            "a person, or part of a person such as a leg, arm or head"],
+                           cwd=REPO, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return None
+    for line in reversed(r.stdout.strip().splitlines()):
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            obj = json.loads(line)
+        except ValueError:
+            continue
+        if str(obj.get("why", "")).startswith("unparseable reply"):
+            return None
+        return bool(obj.get("found"))
+    return None
+
+
 def cmd_watch(args):
     """Dwell on the changed bearing and report movement until it goes still.
 
@@ -268,6 +295,21 @@ def cmd_watch(args):
         return 1
 
     print(f"watching bearing {b} (change {change:.1f})")
+
+    # A person is not a curtain. Movement is what earns attention in the first
+    # place, but once a PERSON has been found, going still is not a reason to
+    # look away - a robot that loses interest in someone the moment they stop
+    # moving reads as indifferent, which is the opposite of what this is for.
+    # Asked once: the question costs about a minute.
+    first = "/tmp/watch_first.jpg"
+    _frame(b, first, settle_ms=400)
+    person = is_person(first) if not args.no_person_check else None
+    deadline = None
+    if person:
+        deadline = time.time() + args.person_seconds
+        print(f"a person is there - holding the gaze for up to "
+              f"{args.person_seconds:.0f}s even if they go still")
+
     prev, still = None, 0
     for i in range(args.frames):
         p = f"/tmp/watch_{i}.jpg"
@@ -279,13 +321,18 @@ def cmd_watch(args):
             moving = d >= CHANGE_FLOOR
             print(f"  {i}: motion {d:.1f} {'MOVING' if moving else 'still'}")
             still = 0 if moving else still + 1
-            if still >= args.patience:
+            if deadline is not None:
+                if time.time() >= deadline:
+                    print("held the gaze long enough - back to neutral")
+                    break
+            elif still >= args.patience:
                 print(f"gone still for {still} frames - losing interest")
                 break
         prev = cur
         time.sleep(args.interval)
     subprocess.run(["sudo", VENV_PY, ARM, "home"], cwd=REPO, capture_output=True)
-    print(f"last view: /tmp/watch_{i}.jpg")
+    who = {True: "person", False: "no person", None: "unknown"}[person]
+    print(f"WATCHED bearing {b}, {who}, {i + 1} frames; last view /tmp/watch_{i}.jpg")
     return 0
 
 
@@ -299,7 +346,11 @@ def main():
     w.add_argument("--frames", type=int, default=12)
     w.add_argument("--interval", type=float, default=1.5)
     w.add_argument("--patience", type=int, default=3,
-                   help="still frames before losing interest")
+                   help="still frames before losing interest (no person present)")
+    w.add_argument("--person-seconds", type=float, default=60.0,
+                   help="how long to keep a person in view even when still")
+    w.add_argument("--no-person-check", action="store_true",
+                   help="skip the ~60 s vision call")
     args = ap.parse_args()
     return {"baseline": cmd_baseline, "look": cmd_look, "watch": cmd_watch}[args.cmd](args)
 
