@@ -476,3 +476,24 @@ the first release - so the run would have dropped the bar and then died before
 repeat two. A `python3 -c "import ast; ast.parse(open('x.py').read())"` catches
 syntax; this needed only running the function once with the arm already home.
 Neither is optional when the script is about to move a real arm five times.
+
+
+### Read servo positions with `arm.py get`, never by parsing `arm status`
+
+`./arm status` prints for people:
+
+    servo 5 (wrist_pitch): position=685 (~46.2 deg)
+
+A training script tried to recover the joints from it with `re.search(r"5:\s*(\d+)")`.
+There is no `5:` in that line - the colon comes after the NAME - so the match is
+None and `m.group(1)` raises on the first call. That call sat right after the
+grasp, so the arm would have been left holding the bar in mid-air with the script
+dead. It is the second run in a row lost to a crash that one dry call would have
+caught.
+
+There is no need to parse anything:
+
+    sudo /home/astra/tools/venv/bin/python3 arm.py get 5    # prints: 685
+
+One number, nothing else. Use it. Human-readable output is for humans, and it is
+free to change wording the day someone improves the message.
