@@ -396,3 +396,83 @@ This is why hovering "over" an object that was just in frame shows bare floor:
 the hover puts the HAND where the object appeared, and the object is really
 further out along the ray. Project the ray to the floor, or descend from the pose
 that has the object in view instead of jumping to a new pose family.
+
+
+### An object at the robot's own base is invisible to both named floor views
+
+Measured 2026-08-30, hunting a bar that was lying right in front of the chassis.
+Twelve frames across bearings 110-790 at `deck` (682) and `floor` (735) showed
+nothing at all. The bar appeared immediately at wrist pitch **500**.
+
+Both named views look a metre out and further, so **anything within about 30 cm
+of the base does not exist to them**. This has now cost an hour twice - the sock
+on 2026-08-29 and the bar on 2026-08-30 - and from outside it looks like the
+robot "searching the ceiling", because it is staring past the thing at its feet.
+
+So a floor search has three ranges, not one:
+
+| pitch | covers |
+|---|---|
+| **500** | right at the base, under the gripper |
+| 682 `deck` | about a metre of tile |
+| 735 `floor` | 1-3 m |
+
+Sweep the base at 500 FIRST when the object was last seen close, and only then
+widen. Do not conclude "not found" from `deck` and `floor` alone.
+
+### Measure an object's colour with the camera that will look at it
+
+The same blue bar, measured two ways on the same afternoon:
+
+| | phone photo | robot's wrist camera |
+|---|---|---|
+| hue | 21 | **107** |
+| saturation | 50 | **115** |
+| pixels inside `OBJ_LO/OBJ_HI` | 2.0% | **71.7%** |
+
+The floor beside it reads S=39 and 0.2% in mask, so the contrast is ample and the
+detector was never the problem - but the phone's white balance pulled everything
+warm and nearly cost a threshold change that would have loosened the mask for no
+reason. A photo from any other camera is evidence of WHERE something is, never of
+what colour it is.
+
+### Reusing this grasp for other objects: swap the detector, not the pipeline
+
+`center_grabframe()` works on blob pixel coordinates and measured gains - it does
+not know or care what makes the blob. The colour lives in exactly one place,
+`pick_eye.see()`, three lines of `cv2.inRange`. So adapting the proven grasp to a
+new object means giving it a new source of (cx, cy): a different mask, a
+contrast-against-plain-floor blob, or a vision-model cell converted to a bearing.
+Everything downstream - centring, orientation, wrist rotation, straight descent,
+clamp, wiggle, retry - is already object-agnostic and stays as it is.
+
+
+### Putting an object DOWN is a descent, not a release at whatever height you are
+
+Written after a training script called its placement routine
+`release_at_floor_then_up()` while the code moved servos 3/4/5 to **HOME_POSE**
+and opened the jaws there. HOME_POSE is folded and raised - the grasp point sits
+at z=179 mm - so that is not placing an object, it is dropping it from 18 cm.
+The same mistake lost the sock on 2026-08-29.
+
+Placing is the grasp run backwards, and it has the same shape:
+
+1. Keep the object held and move to a HOVER above the target, in the same pose
+   family you grasped from - do NOT fold to home on the way.
+2. Descend to `rig.GRASP_Z` the way you came down to pick it up.
+3. **Then** open the jaws - to 515, not 156: fully open swings the jaw arms
+   sideways and can sweep the object you just set down.
+4. Only now lift and return to home.
+
+The check that it worked is a frame, not an assumption: the object should be on
+the floor where you left it, and the jaws should read empty when you close them
+on nothing.
+
+### Run the script before you trust it
+
+The same script ended `release_at_floor_then_up()` with `time.close()`. There is
+no such function; it raises `AttributeError` on the first call, which is after
+the first release - so the run would have dropped the bar and then died before
+repeat two. A `python3 -c "import ast; ast.parse(open('x.py').read())"` catches
+syntax; this needed only running the function once with the arm already home.
+Neither is optional when the script is about to move a real arm five times.
