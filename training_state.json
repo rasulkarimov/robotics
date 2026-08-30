@@ -45,12 +45,13 @@
     },
     "4": {
       "name": "pick an object off the floor",
-      "status": "in_progress",
+      "status": "passed",
       "tally": {
-        "attempts": 3,
-        "held": 2
+        "clean_attempts": 7,
+        "held": 7,
+        "criterion": "4 of 5"
       },
-      "note": "2026-08-29: sock grasped at R=200, bearing -72.5, z=-75, grip stalled 679, wiggle passed. First attempt (grip 642) dropped it during arm.py home. 2026-08-29 19:05, HERMES first verified autonomous grasp: base 290 (sock at 45 deg right), descent pose 3:189,4:644,5:175,6:290 (FK checks out at R=153.7, z=-74.8), stall 676, wiggle passed, lead confirmed the sock in the jaws from a fresh frame. Criterion needs 4 of 5."
+      "note": "PASSED 2026-08-30 with grasp_drill.py on the blue bar: 7 held of 7 clean attempts, each verified by the wiggle test inside grasp_bar and then placed at floor height. Bases 292-454, R 128-200, so the pipeline handles a spread rather than one memorised pose. Three earlier reps failed before reaching the grasp - USB contention between the two agents, fixed by the flock in arm.py - and are excluded as environment, not aiming. OPEN ISSUE: the object WALKS. base 454->292 and R 140->200 over seven cycles, monotonic, because each place-down leaves it slightly further out than it was picked from. At R=200 it is closing on the 251 mm reach limit; a long unattended drill would eventually place it out of reach."
     },
     "5": {
       "name": "socks into the box under the balcony door",

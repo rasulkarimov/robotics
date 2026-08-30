@@ -47,3 +47,8 @@ ts,step,what_was_tried,measured,verdict,note
 2026-08-30T13:24:45,4,grasp drill rep,"base 470, R 154",fail,"grasp_bar raised: CalledProcessError: Command '['/home/astra/robotics/arm', 'step', '2:499', '/home/astra/robotics/calib/_tmp.jpg', '500']' returned non-zero exit status 1."
 2026-08-30T13:25:28,4,grasp drill rep,"base 454, R 140.03501821194476, rot 275",pass,"held by wiggle test, then placed at floor height"
 2026-08-30T13:27:20,4,grasp drill rep,"base 448, R 128.5458747952832, rot 372",pass,"held by wiggle test, then placed at floor height"
+2026-08-30T13:38:09,4,grasp drill rep,"base 371, R 146.01847673328473, rot 374",pass,"held by wiggle test, then placed at floor height"
+2026-08-30T13:39:49,4,grasp drill rep,"base 356, R 130.16140197055864, rot 372",pass,"held by wiggle test, then placed at floor height"
+2026-08-30T13:44:02,4,grasp drill rep,"base 319, R 158.70342857098595, rot 231",pass,"held by wiggle test, then placed at floor height"
+2026-08-30T13:46:20,4,grasp drill rep,"base 299, R 185.81581146316918, rot 212",pass,"held by wiggle test, then placed at floor height"
+2026-08-30T13:48:53,4,grasp drill rep,"base 292, R 200.0, rot 186",pass,"held by wiggle test, then placed at floor height"

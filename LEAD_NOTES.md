@@ -627,3 +627,31 @@ bar. That is exactly the discrimination the colour mask lacks, and it supports
 the architecture the user proposed: vision finds, the existing servo loop
 finishes. The loop itself is colour-agnostic - `center_grabframe` works on blob
 pixels and measured gains; only `see()` is a colour mask, three lines of it.
+
+## 2026-08-30 13:49 — step 4 passed: 7 grasps of 7, and the object walks
+
+`grasp_drill.py` on the blue bar: **7 held of 7 clean attempts**, each verified by
+the wiggle test inside `grasp_bar` and then placed at floor height. Criterion for
+step 4 was 4 of 5. Bases ranged 292-454 and R 128-200, so this is the pipeline
+working across a spread, not one memorised pose repeating.
+
+Three earlier reps are excluded as environment rather than aiming: they died
+before reaching the grasp, on the USB contention between the two agents that the
+`flock` in `arm.py` now prevents.
+
+**The finding the tally hides: the bar walks.** Base 454 → 448 → 371 → 356 → 319
+→ 299 → 292, and R 140 → 128 → 146 → 130 → 159 → 186 → 200. Monotonic, not
+scattered - each place-down leaves the object slightly further out than it was
+picked from, and the next locate follows it there. At R=200 it is closing on the
+251 mm reach limit, so a long unattended drill would eventually place the bar
+somewhere the arm cannot reach and then report "not found" with nothing wrong.
+
+That matters beyond the drill: the same drift is what will make a real errand
+fail slowly rather than obviously. The fix is to place at a COMMANDED point
+rather than wherever the grasp happened to end - the drill already knows the
+pose it picked from, so it can put it back there.
+
+Two attempts at 128.5 and 130.2 mm also contradict the skill's "keep R >= 140"
+rule and nothing snagged. Either the rule is stricter than the hardware, or the
+bracket is out of the way at these bearings. Worth measuring rather than
+assuming, once the arm is free.
