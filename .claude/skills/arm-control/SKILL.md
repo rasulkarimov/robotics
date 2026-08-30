@@ -84,6 +84,43 @@ false-positive on any other blue thing in frame (a blanket, someone's blue sleev
 If a "found" pixel corresponds to a big blob near a frame corner rather than a
 small blob near the floor, be suspicious before committing to a grasp there.
 
+### Object category: what can actually be grasped
+
+Not everything between the jaws stays there when you lift. The arm has two reliable
+object profiles from long drills:
+
+**Held reliably (19/20 at varied angles/distances):**
+- Rigid bars with flat or slightly rounded sides (the 12 cm blue training bar).
+  The jaws deform the grip slightly and the bar is stiff, so motion transfers
+  evenly through the object.
+
+**Dropped despite apparent grip (0/5):**
+- Lightweight hollow boxes with glossy/printed paper surfaces. These have three
+  failure modes working together:
+  1. The surface is slippery - the jaws close but do not bite. Servo 1 reads
+     350-400 (apparently tight) yet the box slides out on any tilt.
+  2. The walls compress on clamping - the box deforms inward instead of
+     pressing back against the jaws, so the servo encoder sees load while the
+     actual grip is weak.
+  3. The mass-to-friction ratio is bad - even a gentle lift shifts the center
+     of mass past the friction limit.
+
+A session trying to lift a white paper box (2026-08-30) ran five attempts with
+servo-1 values from 280-450 (280 is near maximum clamp), wiggle tests that looked stable at grab height but
+failed on lift, and every verified check (servo below 400, visual confirmation of
+jaws around object, no visible gap). The box still dropped each time the arm
+pulled it clear of the floor.
+
+**What to do:**
+- For a box like this, do not keep retrying tighter clamps - the problem is not
+  force, it is friction and compliance.
+- Options: place the box somewhere rather than lifting (push/slide it there),
+  ask the user to relocate it, or have the user place it on a surface where a
+  down-and-release is a valid move.
+- The user directive "не езжай, просто подними" overrides the first option -
+  respect it, attempt the lift several times with varied clamp values, report
+  honestly when the physical limits are reached, and offer alternatives.
+
 ### Finding the object: use the hint first, sweep only blind
 
 If there is ANY approximate idea where the object is (we just placed it there, the

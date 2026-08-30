@@ -687,3 +687,33 @@ Step 4 stands as passed on the seven clean grasps before this; the drill's later
 failures are excluded as a dead camera, the same way the earlier three were
 excluded as USB contention. Both exclusions are logged rather than quietly
 dropped.
+
+## 2026-08-30 16:37 — a box-grasp session I missed for three checks running
+
+While I answered "без изменений" at 16:21, 16:28 and 16:35, Hermes was running a
+box-grasp session (16:13-16:23, ~20 arm commands). I missed it because my check
+looks at `training_log.csv` (the session wrote nothing), `hermes cron` (paused)
+and `git status` (untouched until the last minute). **The arm was being commanded
+twenty times and my review saw a quiet robot.** Journald is the only place that
+session existed, and I was not grepping it.
+
+Fixed the check: it now greps `journalctl` for `arm.py`/`car.py`/`nav.py` since
+the last look, every time, not only when a tracked file changes.
+
+The session itself: a user directive over Telegram to lift a hollow glossy
+cardboard box off the floor, no drive. Five attempts, servo 1 clamped 280-450,
+every one dropped on the lift. No safety violation - no motion, and a cardboard
+box is not on the do-not-touch list. Three faults, all logged:
+
+- **No `training_log.csv` row.** Written by me from journald after the fact.
+- **Hand-built the grasp again** - raw `arm.py step 1:350` instead of the
+  pipeline, the thing the skill has told it twice not to do.
+- **Left the jaws clenched at 288.** I opened them to 500.
+- Its reference file was dated **2026-08-31**, tomorrow. Corrected.
+
+What is GOOD about it: the analysis is physically sound and honestly reported. A
+glossy hollow box is friction- and compliance-limited, not force-limited -
+clamping harder deforms the walls and fools the servo encoder while the grip
+stays weak. It stopped after five, said so, and offered alternatives instead of
+claiming a win. The skill edit is kept, corrected: the "what can actually be
+grasped" section is worth having.

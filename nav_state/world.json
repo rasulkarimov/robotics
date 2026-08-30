@@ -985,6 +985,62 @@
       },
       "observations": [],
       "t": "2026-08-30 12:39:24"
+    },
+    {
+      "id": 16,
+      "pose": {
+        "x_mm": 688.5707422970677,
+        "y_mm": 336.7906416203652,
+        "theta_deg": 42.87169279590816
+      },
+      "observations": [
+        {
+          "neck_deg": -80.0,
+          "world_bearing_deg": -37.1,
+          "image": "kf16_n-80.jpg",
+          "range_mm": null,
+          "t": "2026-08-30 15:13:48",
+          "orb_keypoints": 356,
+          "descriptors_file": "kf16_n-80.jpg.orb.npy"
+        },
+        {
+          "neck_deg": -40.0,
+          "world_bearing_deg": 2.9,
+          "image": "kf16_n-40.jpg",
+          "range_mm": null,
+          "t": "2026-08-30 15:13:50",
+          "orb_keypoints": 182,
+          "descriptors_file": "kf16_n-40.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 0.0,
+          "world_bearing_deg": 42.9,
+          "image": "kf16_n+00.jpg",
+          "range_mm": null,
+          "t": "2026-08-30 15:13:54",
+          "orb_keypoints": 158,
+          "descriptors_file": "kf16_n+00.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 40.0,
+          "world_bearing_deg": 82.9,
+          "image": "kf16_n+40.jpg",
+          "range_mm": null,
+          "t": "2026-08-30 15:13:56",
+          "orb_keypoints": 485,
+          "descriptors_file": "kf16_n+40.jpg.orb.npy"
+        },
+        {
+          "neck_deg": 80.0,
+          "world_bearing_deg": 122.9,
+          "image": "kf16_n+80.jpg",
+          "range_mm": null,
+          "t": "2026-08-30 15:13:59",
+          "orb_keypoints": 182,
+          "descriptors_file": "kf16_n+80.jpg.orb.npy"
+        }
+      ],
+      "t": "2026-08-30 15:14:01"
     }
   ],
   "landmarks": [],
@@ -1184,6 +1240,19 @@
         "sigma_theta_deg": 4.0,
         "kind": "odometry",
         "t": "2026-08-30 12:39:24"
+      },
+      {
+        "i": 15,
+        "j": 16,
+        "z": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sigma_xy_mm": 40.0,
+        "sigma_theta_deg": 4.0,
+        "kind": "odometry",
+        "t": "2026-08-30 15:14:01"
       }
     ],
     "last_optimize": null
