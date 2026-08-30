@@ -1,0 +1,19 @@
+[Unit]
+Description=Restart the camera when it dies, unless the robot is deliberately asleep
+After=car-server.service
+Wants=car-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/astra/robotics
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/home/astra/.local/bin
+# Only acts when port 8090 is down AND no .asleep marker exists. `car.py sleep`
+# stops the streamer on purpose to save a battery the Pi shares; a watchdog that
+# could not tell that apart would fight every nap the robot took, which is why
+# this one was withheld until the marker existed.
+ExecStart=/usr/bin/python3 /home/astra/robotics/camera_watch.py watch
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=default.target

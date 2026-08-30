@@ -37,3 +37,4 @@ claude_remote_transcript.log.*
 # One row per sound event; telemetry like the others
 sound_log.csv
 nav_state/room_last/
+camera_log.csv

@@ -572,3 +572,29 @@ and says why - though that message went to stderr and the daemon was only readin
 stdout, so a good diagnosis was logged as "no output". Fixed. A watchdog is now
 safe to build, because the sleep marker distinguishes a deliberate shutdown from
 a fault; it was not safe before.
+
+## 2026-08-30 12:21 — the camera watchdog, now that it can be built honestly
+
+Four failures today (00:08, 10:36, 11:08, 12:12), always identical: `Main.py`
+alive, command port answering, `mjpg-streamer` dead. Nothing noticed, so the
+robot's normal failure mode was "alive but blind".
+
+I proposed a watchdog this morning and withdrew it the same hour, because one of
+those outages turned out to be `car.py sleep` - deliberate power saving on a
+shared battery - and a naive watchdog would have fought every nap the robot took,
+draining exactly the pack sleep exists to protect. That objection is now
+answerable: `sleep` leaves a marker, so `camera_watch.py` acts **only** when the
+port is down AND no marker is present.
+
+Verified all three verdicts before installing: camera up -> "UP"; camera stopped
+with a marker -> "asleep, leaving it alone"; camera stopped without one ->
+"DOWN and not asleep". Then installed it and left the camera dead on purpose: it
+noticed, waited for a second consecutive miss, restarted, and the camera came
+back at 12:21:06 without anyone touching it.
+
+Guards: two consecutive misses before acting, since one failed poll can be the
+streamer mid-restart or an orient sweep holding the device; and at most six
+restarts an hour, after which it logs "needs a person" and stops - a watchdog
+that spins forever hides the fault it was meant to expose. Every action goes to
+`camera_log.csv`, which finally gives the failure rate a number instead of an
+impression.

@@ -19,3 +19,4 @@ ts,step,what_was_tried,measured,verdict,note
 2026-08-30T12:03:17,0,sound wake: orient and watch,"RMS 61, peak 156, threshold 30, bearing 650",pass,"person; heard: ""Астар, как мы не с ним и бросили таборь на пауне."""
 2026-08-30T12:05:02,0,sound wake: orient and watch,"RMS 203, peak 873, threshold 30, bearing 650",pass,"person unknown; heard: ""Астра — дымни, сни, брост."""
 2026-08-30T12:12:28,0,sound wake: orient and watch,"RMS 196, peak 604, threshold 30",pass,"person unknown; heard: ""Астра — посмотри, идиот."""
+2026-08-30T12:20:29,0,sound wake: orient and watch,"RMS 197, peak 760, threshold 30",pass,"person unknown; heard: ""Астра, посмотри на потолок."""
