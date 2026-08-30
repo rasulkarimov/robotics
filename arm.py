@@ -52,6 +52,8 @@ Do not trust servo-ID-to-joint mappings from Hiwonder's other product docs (ArmP
 FPV, xArm AI) - checked both, neither one's numbering matches this xArm 1S board.
 """
 import argparse
+import contextlib
+import fcntl
 import json
 import os
 import subprocess
@@ -359,6 +361,33 @@ def list_recordings():
                 print(f"{fn[:-5]}: (unreadable: {e})")
 
 
+LOCK_PATH = "/tmp/astra-arm.lock"
+
+
+@contextlib.contextmanager
+def _arm_lock(timeout=90.0):
+    """Serialise access to the arm's USB device across processes."""
+    f = open(LOCK_PATH, "w")
+    start = time.time()
+    while True:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except OSError:
+            if time.time() - start > timeout:
+                print(f"arm busy: another process has held {LOCK_PATH} for "
+                      f"{timeout:.0f}s. Who else is driving the arm?",
+                      file=sys.stderr)
+                f.close()
+                sys.exit(3)
+            time.sleep(0.2)
+    try:
+        yield
+    finally:
+        fcntl.flock(f, fcntl.LOCK_UN)
+        f.close()
+
+
 def main():
     if not _in_venv():
         _reexec_with_sudo_venv()
@@ -407,51 +436,63 @@ def main():
                    help="move even on a flat battery (only to park the arm)")
     args = p.parse_args()
 
-    arm = connect()
+    # ONE arm, TWO agents. Claude Code and Hermes both drive this robot, and
+    # nothing arbitrated the hardware between them until 2026-08-30, when both
+    # ran the same grasp drill at once: the HID device takes a single opener, so
+    # whichever call came second died with `OSError: open failed` and the grasp
+    # pipeline saw an unexplained non-zero exit. It looked like a broken script
+    # for half an hour.
+    #
+    # The lock is advisory and per-invocation. It cannot stop two agents from
+    # interleaving whole grasps - that needs a human decision about who is
+    # driving - but it does stop them from colliding inside one, which is the
+    # failure that produced no useful error message.
+    with _arm_lock():
+        arm = connect()
 
-    # Anything that drives the servos goes through the battery guard. Read-only commands
-    # (status/battery/get/recordings) always work - you need them most when it's flat.
-    if args.cmd in ("move", "step", "home", "replay") and not battery_guard(arm, args.force):
-        sys.exit(2)
+        # Anything that drives the servos goes through the battery guard. Read-only commands
+        # (status/battery/get/recordings) always work - you need them most when it's flat.
+        if args.cmd in ("move", "step", "home", "replay") and not battery_guard(arm, args.force):
+            sys.exit(2)
 
-    if args.cmd == "status":
-        v = battery(arm)
-        print(f"battery: {v} V")
-        for sid, pos in positions(arm).items():
-            name = JOINT_NAMES.get(sid, "?")
-            if isinstance(pos, int):
-                deg = (pos / 1000.0) * 250.0 - 125.0
-                print(f"servo {sid} ({name}): position={pos} (~{deg:.1f} deg)")
-            else:
-                print(f"servo {sid} ({name}): {pos}")
-    elif args.cmd == "battery":
-        print(f"{battery(arm)} V")
-    elif args.cmd == "home":
-        home(arm, keep_grip=args.keep_grip)
-        print(f"home: {HOME_POSE}" + (" (клешня не тронута)" if args.keep_grip else ""))
-    elif args.cmd == "get":
-        print(arm.getPosition(args.servo_id))
-    elif args.cmd == "move":
-        move_one(arm, args.servo_id, args.position, args.duration_ms)
-        print(f"servo {args.servo_id} -> {args.position} over {args.duration_ms}ms")
-    elif args.cmd == "release":
-        ids = args.servo_ids if args.servo_ids else None
-        release(arm, ids)
-        print(f"released: {ids or 'all'}")
-    elif args.cmd == "step":
-        moves = []
-        for pair in args.moves.split(","):
-            sid, pos = pair.split(":")
-            moves.append((int(sid), int(pos)))
-        step(arm, moves, args.path, args.duration_ms, args.settle)
-    elif args.cmd == "teach":
-        teach(arm, args.name, args.duration, args.interval)
-    elif args.cmd == "capture":
-        capture(arm, args.name)
-    elif args.cmd == "replay":
-        replay(arm, args.name, args.step_ms)
-    elif args.cmd == "recordings":
-        list_recordings()
+        if args.cmd == "status":
+            v = battery(arm)
+            print(f"battery: {v} V")
+            for sid, pos in positions(arm).items():
+                name = JOINT_NAMES.get(sid, "?")
+                if isinstance(pos, int):
+                    deg = (pos / 1000.0) * 250.0 - 125.0
+                    print(f"servo {sid} ({name}): position={pos} (~{deg:.1f} deg)")
+                else:
+                    print(f"servo {sid} ({name}): {pos}")
+        elif args.cmd == "battery":
+            print(f"{battery(arm)} V")
+        elif args.cmd == "home":
+            home(arm, keep_grip=args.keep_grip)
+            print(f"home: {HOME_POSE}" + (" (клешня не тронута)" if args.keep_grip else ""))
+        elif args.cmd == "get":
+            print(arm.getPosition(args.servo_id))
+        elif args.cmd == "move":
+            move_one(arm, args.servo_id, args.position, args.duration_ms)
+            print(f"servo {args.servo_id} -> {args.position} over {args.duration_ms}ms")
+        elif args.cmd == "release":
+            ids = args.servo_ids if args.servo_ids else None
+            release(arm, ids)
+            print(f"released: {ids or 'all'}")
+        elif args.cmd == "step":
+            moves = []
+            for pair in args.moves.split(","):
+                sid, pos = pair.split(":")
+                moves.append((int(sid), int(pos)))
+            step(arm, moves, args.path, args.duration_ms, args.settle)
+        elif args.cmd == "teach":
+            teach(arm, args.name, args.duration, args.interval)
+        elif args.cmd == "capture":
+            capture(arm, args.name)
+        elif args.cmd == "replay":
+            replay(arm, args.name, args.step_ms)
+        elif args.cmd == "recordings":
+            list_recordings()
 
 
 if __name__ == "__main__":

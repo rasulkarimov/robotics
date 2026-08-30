@@ -23,6 +23,7 @@ Runs under the ARM VENV (needs cv2/numpy) and as root:
 """
 import argparse
 import csv
+import subprocess
 import math
 import os
 import sys
@@ -48,27 +49,32 @@ def log_row(what, measured, verdict, note):
                                 "4", what, measured, verdict, note])
 
 
-def place_down(arm, kin, rig, base, R, log=print):
+def place_down(kin, rig, base, R, log=print):
     """Put the held object down: descend, THEN open, THEN lift.
 
-    The order is the whole point. Opening at height is a drop, and moving away
+    The ORDER is the whole point: opening at height is a drop, and moving away
     while still closed drags the object with it.
+
+    Goes through `pick_eye.arm_step` rather than a held `xarm.Controller`. The
+    HID device takes one opener, and grasp_bar shells out to ./arm constantly -
+    with a Controller alive in this process every one of those died with
+    `OSError: open failed`, which is how the drill's first run lost all five
+    reps. Diagnosed and fixed by Hermes during that run.
     """
+    import pick_eye as pe
     ang = math.radians((base - 500) / 4.0)
     for z in (rig.GRASP_Z + 60, rig.GRASP_Z + 20, rig.GRASP_Z):
         sol = kin.ik_search(R * math.cos(ang), R * math.sin(ang), z)
         if not sol:
             log(f"  no IK at z={z:.0f}; stopping the descent here")
             break
-        arm.setPosition([[6, sol[6]], [5, sol[5]], [4, sol[4]], [3, sol[3]]],
-                        duration=900, wait=True)
+        pe.arm_step(f"6:{sol[6]},5:{sol[5]},4:{sol[4]},3:{sol[3]}", 900)
         time.sleep(0.4)
-    arm.setPosition(1, RELEASE_WIDTH, duration=700, wait=True)   # release FIRST
+    pe.arm_step(f"1:{RELEASE_WIDTH}", 700)   # release FIRST
     time.sleep(0.5)
     sol = kin.ik_search(R * math.cos(ang), R * math.sin(ang), rig.GRASP_Z + 70)
-    if sol:                                                      # then lift
-        arm.setPosition([[5, sol[5]], [4, sol[4]], [3, sol[3]]],
-                        duration=900, wait=True)
+    if sol:
+        pe.arm_step(f"5:{sol[5]},4:{sol[4]},3:{sol[3]}", 900)
     time.sleep(0.3)
 
 
@@ -89,8 +95,9 @@ def main():
         return 0
 
     import kin, rig, tanggrab
-    from xarm import Controller
-    arm = Controller("USB")
+    # NOTE: do NOT create xarm.Controller here - tanggrab calls ./arm which needs HID
+    # arm = Controller("USB")
+
 
     held = 0
     for i in range(1, a.reps + 1):
@@ -99,8 +106,10 @@ def main():
             res = tanggrab.grasp_bar(a.base, a.R)
         except Exception as e:
             print(f"  grasp_bar raised: {e}")
+            # 100 characters truncated a CalledProcessError right before the
+            # part that says WHY - the exit status. Keep enough to diagnose.
             log_row("grasp drill rep", f"base {a.base}, R {a.R:.0f}",
-                    "fail", f"grasp_bar raised: {str(e)[:100]}")
+                    "fail", f"grasp_bar raised: {type(e).__name__}: {str(e)[:400]}")
             continue
 
         if not res or not res.get("held"):
@@ -112,7 +121,7 @@ def main():
 
         held += 1
         print(f"  HELD: {res}")
-        place_down(arm, kin, rig, res.get("base", a.base), res.get("R", a.R))
+        place_down(kin, rig, res.get("base", a.base), res.get("R", a.R))
         log_row("grasp drill rep",
                 f"base {res.get('base')}, R {res.get('R')}, rot {res.get('rot')}",
                 "pass", "held by wiggle test, then placed at floor height")
