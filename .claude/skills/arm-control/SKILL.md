@@ -111,9 +111,20 @@ blue mask, so `see()` finds nothing and there is no centring - the pose was
 guessed by hand with raw `arm.py step`. That is the "swap the detector, not the
 pipeline" work, not a physics limit.
 
-So: before concluding an object cannot be grasped, prove the jaws closed ON it.
-A stall at 686-687 means they closed on nothing. And no camera, depth or
-otherwise, fixes a clamp commanded in the wrong direction.
+**And it never bent down.** The pose it grasped from, `3:237,4:843,5:500`, is a
+LOOKING pose - the one this skill recommends for spotting something at the base -
+and its grasp point sits at **z = +70 mm**, which is **145 mm above the floor**
+(`rig.GRASP_Z` = -75). The jaws were closing in mid-air, a hand's width over the
+object. That alone explains the 687 stall.
+
+The search pitches in "an object at the robot's own base is invisible" are for
+SEEING. None of them is a grasp pose. Having found the thing, compute the descent
+- `kin.ik_search(R*cos, R*sin, rig.GRASP_Z)` - and go down to it. `grasp_bar`
+does this for you, which is the other reason not to hand-build a grasp.
+
+So: before concluding an object cannot be grasped, prove the jaws closed ON it,
+at floor height, with the clamp going the right way. A stall at 686-687 means
+they closed on nothing. And no camera, depth or otherwise, fixes any of that.
 
 ### Finding the object: use the hint first, sweep only blind
 
