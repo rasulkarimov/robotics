@@ -539,3 +539,38 @@ There is no need to parse anything:
 
 One number, nothing else. Use it. Human-readable output is for humans, and it is
 free to change wording the day someone improves the message.
+
+
+### Grasping something the colour mask cannot see
+
+`pick_eye.see()` is a blue HSV mask, so it finds exactly one object. Everything
+downstream is indifferent to colour - `center_grabframe` steers blob pixels with
+measured gains, `grasp_bar` reads orientation from a contour - so a white box or
+a black sock needs a different SOURCE of (cx, cy), not a second pipeline.
+
+    import pick_eye as pe
+    pe.DETECTOR = "generic"        # then grasp_bar works unchanged
+    pe.DETECTOR = "blue"           # back to the mask
+
+`see_generic()` finds whatever is not floor. Four things had to be measured
+before it worked, and each was a wrong assumption first:
+
+1. **Chroma only, no luminance.** With L in the distance, the arm's own shadow
+   crossed the threshold and got reported as the object. It also means the black
+   jaw bodies need no rule: they match the floor in a/b and differ only in
+   brightness.
+2. **A local background, not one reference colour.** The floor is not uniform -
+   b=128 at the top of a frame and b=142 at the bottom, a distance of 45, the
+   same size as the box's own signal. No global threshold can separate those. An
+   81 px blur gives every pixel its own neighbourhood's colour and the gradient
+   cancels; 151 px left bare floor producing 9,000-18,000 px blobs.
+3. **Mask the jaw pads by COLOUR, not position.** Cutting the bottom corners
+   fails on exactly the frames that matter, where the jaws are around the object
+   and the object is in the corner. The pads are H=4-5, S=152-172 against a floor
+   at H=21, S=22. Cost: a strongly red object reads as part of the robot.
+4. **Its own area window.** The box measured 121,625 px against the bar mask's
+   90,000 cap and was discarded as too large, after which the detector settled on
+   a 9,130 px artefact.
+
+Verified: finds the box in four views, including one with the jaws around it, and
+returns None on two bare-floor frames.

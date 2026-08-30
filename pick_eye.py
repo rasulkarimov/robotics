@@ -203,8 +203,107 @@ def _bar_shaped(c, hsv):
     return True
 
 
+# ---------------------------------------------------------------- generic eye
+#
+# The colour mask above only ever sees ONE object. Everything downstream is
+# indifferent to colour - `center_grabframe` steers a blob's pixel coordinates
+# with measured gains, `grasp_bar` measures orientation from a contour - so the
+# way to grasp a white box or a black sock is to change where the blob comes
+# from, not to write a second pipeline.
+#
+# The principle that generalises: on a plain floor the FLOOR is the dominant
+# uniform surface, and the object is whatever deviates from it. That needs no
+# per-object tuning and adapts to a different floor on its own.
+#
+# Measured on this robot's own camera, one frame, box against tile:
+#     BOX    L=163 a=127 b=110 | H=105 S=79 V=192
+#     floor  L=156 a=126 b=124 | H=102 S=24 V=151
+# LAB's b (yellow-blue) separates them by 14 while a barely moves: the tile is
+# warm, the box is neutral. Chroma is also what survives the arm's own shadow,
+# which swings L hard and leaves a/b alone - so distance is weighted towards
+# a/b and away from L.
+# Distance is CHROMA ONLY. Weighting luminance at all made the arm's own shadow
+# clear the threshold and get reported as the object; a/b barely move under
+# shadow while L swings hard. It also means the black jaw bodies need no rule of
+# their own - measured a=127 b=129 against a floor at a=128 b=132, identical in
+# chroma and only darker.
+GENERIC_CHROMA_W = 3.0
+GENERIC_THRESH = 22.0
+
+# Compared against a LOCAL background, not one reference colour for the frame.
+# The floor is not uniform: measured on one bare-floor frame it reads b=128 at
+# the top and b=142 near the bottom, a chroma distance of 45 - the same
+# magnitude as the box's own signal, so no global threshold can separate them.
+# Blurring the frame gives each pixel the colour its own neighbourhood has, and
+# the gradient cancels. 81 px was measured against 151: at 151 the bare floor
+# still produced blobs of 9,000-18,000 px.
+GENERIC_BG_KERNEL = 81
+
+# The jaws are always in frame. Cutting them out BY POSITION does not work: on a
+# frame where the jaws are around the object, the object sits exactly in the
+# excluded corners. Their pads are cut by colour instead - measured H=4-5,
+# S=152-172 against a floor at H=21, S=22. (Cost: a strongly red object would be
+# masked as though it were part of the robot.)
+GENERIC_PAD_SAT_MIN = 90
+GENERIC_PAD_HUE = 12
+
+# Its own area window, wider than the bar's. An object directly under the camera
+# legitimately fills much of the frame: the box measured 121,625 px against the
+# blue mask's 90,000 cap and was thrown away as too large, after which the
+# detector latched onto a 9,130 px artefact instead.
+GENERIC_MIN_AREA, GENERIC_MAX_AREA = 1500, 200000
+
+
+def see_generic(img=None):
+    """Where the object is, for an object with no colour mask of its own.
+
+    Same contract as `see()`: (cx, cy) in the ORIGINAL image, or None.
+
+    Verified on this robot's frames: finds the white box in four views including
+    one where it is between the jaws, and returns None on two bare-floor frames.
+    """
+    if img is None:
+        img = pick.frame()
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(np.float32)
+    bg = cv2.GaussianBlur(lab, (GENERIC_BG_KERNEL, GENERIC_BG_KERNEL), 0)
+    d = np.abs(lab - bg)
+    dist = GENERIC_CHROMA_W * (d[:, :, 1] + d[:, :, 2])
+    m = (dist > GENERIC_THRESH).astype(np.uint8) * 255
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    hue, sat = hsv[:, :, 0], hsv[:, :, 1]
+    pads = ((sat > GENERIC_PAD_SAT_MIN) &
+            ((hue < GENERIC_PAD_HUE) | (hue > 180 - GENERIC_PAD_HUE)))
+    m[cv2.dilate(pads.astype(np.uint8) * 255, np.ones((15, 15), np.uint8)) > 0] = 0
+
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
+    cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    best = None
+    for c in cnts:
+        a = cv2.contourArea(c)
+        if not (GENERIC_MIN_AREA <= a <= GENERIC_MAX_AREA):
+            continue
+        if best is None or a > best[0]:
+            best = (a, c)
+    if best is None:
+        return None
+    M = cv2.moments(best[1])
+    if M["m00"] == 0:
+        return None
+    return M["m10"] / M["m00"], M["m01"] / M["m00"]
+
+
+# Which eye the pipeline uses. Left on the colour mask by default so every
+# existing drill keeps the behaviour it was measured with; switch to "generic"
+# for an object the mask cannot see.
+DETECTOR = "blue"
+
+
 def see():
     """Where the object is in the image right now (wrist camera)."""
+    if DETECTOR == "generic":
+        return see_generic()
     img = pick.frame()
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     m = cv2.inRange(hsv, OBJ_LO, OBJ_HI)
