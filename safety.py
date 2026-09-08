@@ -45,6 +45,27 @@ MAX_BLIND_MM = 400
 
 FORWARD_ANGLES = (75, 90, 105)
 
+# Two echoes from genuinely different bearings are never bit-identical; when they
+# are, the sensor is stuck rather than measuring. Real repeat readings on the same
+# bearing vary by whole centimetres, so 0.05 cm is far below the noise floor and
+# cannot fire on a true measurement.
+STUCK_EPS_CM = 0.05
+
+# Depth (Aurora930 RGB-D, served by aurora-camera.service on :8090/depth).
+# It does NOT replace the ultrasonic - the two are blind to different things and
+# the gate wants both:
+#   * the ultrasonic is one narrow beam, drops echoes, and cannot see a flat or
+#     thin object lying on the floor, but it does read right down to a few cm;
+#   * the depth map is a 640x400 metric field that catches those objects, but
+#     structured light returns nothing closer than ~15 cm or past ~4 m.
+# So depth may only ever ADD a block or an unknown here. It can never clear one.
+DEPTH_MIN_COVERAGE = 0.18
+# Measured 2026-09-09, five samples each and stable to a few tenths of a percent:
+# arm folded/home (the pose a drive is supposed to start from, looking at the
+# near floor) gives 26%; arm at `horizon` pitch, staring at a plain wall past the
+# backlit counter, gives 11%. 0.18 sits between them, so a gate that demands
+# coverage is also demanding that the arm be looking where the robot would drive.
+
 
 def _run(cmd, timeout=60):
     return subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, timeout=timeout)
@@ -82,13 +103,16 @@ def _sonic_once(timeout=20):
 
 
 def clearance(angles=FORWARD_ANGLES, samples=3):
-    """Median distance per bearing, in cm.
+    """(median distance per bearing in cm, every raw reading taken).
 
     A single echo drops out or spikes constantly on this sensor - two radar
     sweeps minutes apart disagreed by 175 cm on the same bearing - so one
     reading is never enough to authorise motion.
+
+    The raw readings come back too because a frozen sensor is invisible in the
+    medians: see is_sonic_stuck().
     """
-    out = {}
+    out, raws = {}, []
     for a in angles:
         try:
             _run(["python3", "car.py", "pan", str(a)], timeout=20)
@@ -96,6 +120,7 @@ def clearance(angles=FORWARD_ANGLES, samples=3):
             pass
         time.sleep(0.35)
         vals = [v for v in (_sonic_once() for _ in range(samples)) if v is not None]
+        raws += vals
         if vals:
             vals.sort()
             out[a] = vals[len(vals) // 2]
@@ -105,7 +130,44 @@ def clearance(angles=FORWARD_ANGLES, samples=3):
         _run(["python3", "car.py", "center-camera"], timeout=20)
     except subprocess.TimeoutExpired:
         pass
-    return out
+    return out, raws
+
+
+def is_sonic_stuck(raws, eps_cm=STUCK_EPS_CM, need=3):
+    """True when every echo came back byte-identical across different bearings.
+
+    This sensor's dead mode is not silence, it is a plausible constant. On
+    2026-08-29 it returned 24.837 cm nine times running; on 2026-09-09 it
+    returned 173.502 cm on fifteen reads spanning 140 deg of pan, while the depth
+    camera saw a sofa at 67 cm - and the raw I2C register was frozen too, so it
+    is the shield/sensor, not Main.py (a car-server restart does not clear it).
+
+    The gate cannot survive that on medians alone: a constant answers every
+    bearing, so `readable` is full and `min_cm` looks generous. The turret really
+    does move between bearings, so identical values across them are not a
+    measurement - they are the absence of one.
+    """
+    return len(raws) >= need and (max(raws) - min(raws)) < eps_cm
+
+
+def depth_clearance():
+    """(nearest_cm | None, coverage 0-1 | None, note).
+
+    Nearest is the 5th percentile of non-zero depths in the central band, not the
+    single minimum - one stray near pixel is noise, and the gate should not be
+    hostage to it. None means the depth map could not be read at all, which is an
+    unknown, not a clear.
+    """
+    try:
+        if REPO not in sys.path:
+            sys.path.insert(0, REPO)
+        import depth as depth_mod
+        w, h, a = depth_mod.fetch()
+        s = depth_mod.sectors(w, h, a)
+    except Exception as e:
+        return None, None, f"unreadable: {type(e).__name__}: {e}"[:160]
+    near = s.get("nearp")
+    return (None if near is None else near / 10.0), s.get("coverage"), "ok"
 
 
 def human_in_frame(frame=None, retries=1):
@@ -192,11 +254,19 @@ def preflight(action, skip_human=False):
         report["blocks"].append(
             f"battery {v} V below return threshold {BATT_RETURN} - charger only")
 
-    dist = clearance()
+    dist, raws = clearance()
     report["clearance_cm"] = dist
     readable = {a: d for a, d in dist.items() if d is not None}
+    stuck = is_sonic_stuck(raws)
+    report["sonic_stuck"] = stuck
+    if stuck:
+        report["unknown"].append(
+            f"ultrasonic frozen: {len(raws)} readings across "
+            f"{len(readable)} bearings all equal {raws[0]} cm - not a measurement")
     if not readable:
         report["unknown"].append("no ultrasonic bearing answered")
+    elif stuck:
+        pass  # a frozen constant is not a clearance; do not derive min_cm from it
     else:
         worst = min(readable.values())
         report["min_cm"] = worst
@@ -207,6 +277,28 @@ def preflight(action, skip_human=False):
             report["unknown"].append(
                 "bearings with no echo: "
                 + ",".join(str(a) for a, d in dist.items() if d is None))
+
+    d_cm, d_cov, d_note = depth_clearance()
+    report["depth_cm"] = d_cm
+    report["depth_coverage"] = d_cov
+    if d_cm is None:
+        report["unknown"].append(f"depth map {d_note}")
+    else:
+        if d_cm < need:
+            report["blocks"].append(
+                f"depth sees a surface at {d_cm:.0f} cm < {need} cm required to {action}")
+        # Low coverage means the depth map has no opinion. That is only safe to
+        # shrug off when the ultrasonic independently reports plenty of room -
+        # otherwise "no returns" is exactly what an obstacle inside the camera's
+        # ~15 cm blind zone looks like.
+        if d_cov is not None and d_cov < DEPTH_MIN_COVERAGE:
+            us = report.get("min_cm")
+            if us is None or us < 2 * need:
+                report["unknown"].append(
+                    f"depth coverage {d_cov * 100:.0f}% below "
+                    f"{DEPTH_MIN_COVERAGE * 100:.0f}% (is the arm folded and looking "
+                    "at the near floor?) and the ultrasonic does not independently "
+                    "show generous room")
 
     if skip_human:
         report["human"] = "skipped"
@@ -244,6 +336,7 @@ def main():
     cl.add_argument("--angles", default=",".join(str(a) for a in FORWARD_ANGLES))
     hu = sub.add_parser("human", help="is a person in frame?")
     hu.add_argument("--frame")
+    sub.add_parser("depth", help="nearest surface + coverage from the depth map")
     args = ap.parse_args()
 
     if args.cmd == "preflight":
@@ -256,12 +349,20 @@ def main():
         return 0 if v is not None else 2
     if args.cmd == "clearance":
         angles = tuple(int(a) for a in args.angles.split(","))
-        print(json.dumps(clearance(angles), indent=2))
-        return 0
+        dist, raws = clearance(angles)
+        stuck = is_sonic_stuck(raws)
+        print(json.dumps({"clearance_cm": dist, "raw": raws, "sonic_stuck": stuck},
+                         indent=2))
+        return 2 if stuck else 0
     if args.cmd == "human":
         human, raw = human_in_frame(args.frame)
         print(json.dumps({"human_in_frame": human, "raw": raw}, ensure_ascii=False))
         return 0 if human is False else (1 if human is True else 2)
+    if args.cmd == "depth":
+        d_cm, d_cov, note = depth_clearance()
+        print(json.dumps({"nearest_cm": d_cm, "coverage": d_cov,
+                          "min_coverage": DEPTH_MIN_COVERAGE, "note": note}))
+        return 0 if d_cm is not None else 2
     return 2
 
 
