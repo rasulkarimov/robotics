@@ -122,6 +122,19 @@ int main(int argc, char** argv) {
     a900->EnableUndistortRgb(true);
   }
 
+  // Intrinsics go into meta.json so consumers can turn a pixel shift into an
+  // angle without hard-coding a FOV. depth_odom.py needs fx for exactly that.
+  Intrinsic ir_intr, rgb_intr;
+  Extrinsic extr;
+  bool have_intr = (dev->GetCameraParameters(ir_intr, rgb_intr, extr) == 0);
+  if (have_intr)
+    fprintf(stderr, "rgb intrinsics: fx=%.2f fy=%.2f cx=%.2f cy=%.2f (%dx%d)\n",
+            rgb_intr.focal_length[0], rgb_intr.focal_length[1],
+            rgb_intr.principal_point[0], rgb_intr.principal_point[1],
+            rgb_intr.cols, rgb_intr.rows);
+  else
+    fprintf(stderr, "GetCameraParameters failed; meta.json will omit intrinsics\n");
+
   Stream* stream = nullptr;
   if ((ret = dev->CreateStream(stream, {kRgbd}))) {
     fprintf(stderr, "CreateStream ret=%d\n", ret);
@@ -178,12 +191,21 @@ int main(int argc, char** argv) {
 
     if (wrote_rgb || depth_w) {
       frame_no++;
-      char meta[512];
+      char meta[768];
       int n = snprintf(meta, sizeof(meta),
                        "{\"ts_ms\":%llu,\"frame\":%llu,\"rgb_w\":%d,\"rgb_h\":%d,"
-                       "\"depth_w\":%d,\"depth_h\":%d,\"center_mm\":%u}\n",
+                       "\"depth_w\":%d,\"depth_h\":%d,\"center_mm\":%u",
                        (unsigned long long)now_ms(), (unsigned long long)frame_no,
                        rgb_w, rgb_h, depth_w, depth_h, center_mm);
+      if (have_intr && n > 0 && n < (int)sizeof(meta))
+        n += snprintf(meta + n, sizeof(meta) - n,
+                      ",\"fx\":%.4f,\"fy\":%.4f,\"cx\":%.4f,\"cy\":%.4f,"
+                      "\"intr_w\":%d,\"intr_h\":%d",
+                      rgb_intr.focal_length[0], rgb_intr.focal_length[1],
+                      rgb_intr.principal_point[0], rgb_intr.principal_point[1],
+                      rgb_intr.cols, rgb_intr.rows);
+      if (n > 0 && n < (int)sizeof(meta))
+        n += snprintf(meta + n, sizeof(meta) - n, "}\n");
       write_atomic(meta_path, meta, n);
     }
 
