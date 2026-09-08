@@ -1,0 +1,72 @@
+{
+  "$comment": [
+    "Autonomy allow-list for the robot. The persistent remote session runs WITHOUT",
+    "Bypass Permissions mode - on Claude Code 2.1.263 that mode cannot start headless",
+    "at all (see docs/claude-remote-session.md). Whitelisting the calls the robot",
+    "actually makes is the replacement: narrower than bypass, and auditable in git.",
+    "",
+    "These rules DO grant unattended physical motion (chassis, arm, gripper) and",
+    "`./arm` shells out through sudo, because arm.py needs root for /dev/hidraw and",
+    "the venv for xarm+hidapi. Safety still comes from safety.py and the limits in",
+    "the robot-training skill, not from permission prompts."
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(python3 car.py:*)",
+      "Bash(python3 vision.py:*)",
+      "Bash(python3 safety.py:*)",
+      "Bash(python3 health_log.py:*)",
+      "Bash(python3 camera_watch.py:*)",
+      "Bash(python3 listen.py:*)",
+      "Bash(python3 usb_charger.py:*)",
+      "Bash(python3 rig.py:*)",
+
+      "Bash(./arm:*)",
+
+      "Bash(/home/astra/tools/venv/bin/python3 arm.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 nav.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 navloop.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 perceive.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 orient.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 orbit.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 maneuver.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 kturn.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 dxyaw.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 turncal.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 calib.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 calib3d.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 pick.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 pick3d.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 pick_eye.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 grasp.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 grasp_drill.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 train_grasp.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 tanggrab.py:*)",
+      "Bash(/home/astra/tools/venv/bin/python3 grab2.py:*)",
+
+      "Bash(systemctl --user status:*)",
+      "Bash(systemctl status:*)",
+      "Bash(systemctl is-active:*)",
+      "Bash(systemctl is-enabled:*)",
+
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+
+      "Bash(lsusb:*)",
+      "Bash(v4l2-ctl:*)",
+      "Bash(free:*)",
+      "Bash(uptime:*)",
+      "Bash(vcgencmd:*)"
+    ],
+    "deny": [
+      "Bash(sudo rm:*)",
+      "Bash(sudo reboot:*)",
+      "Bash(sudo shutdown:*)",
+      "Bash(sudo dd:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)"
+    ]
+  }
+}
