@@ -105,8 +105,10 @@ To keep the robot autonomous for the calls it actually makes, the answer is
 | network wedge | `ExecStartPre=wait_for_internet_gate.py` (refuses to start into a hang) + `net_watchdog.restart_claude_remote()` |
 | conversation memory | the pinned session id, with the self-healing fallback above |
 
-`net_watchdog.py` is not itself installed as a service on this machine yet, so
-that last row is only half-wired.
+`net_watchdog.py` runs as `net-watchdog.service` (system unit, root, enabled).
+The unit file is `systemd/net-watchdog.service` in this repo; it had only ever
+been written into `/etc/systemd/system/` and was lost on the last card rebuild,
+so re-check it exists after any reflash: `systemctl is-active net-watchdog`.
 
 ## Operating notes
 
