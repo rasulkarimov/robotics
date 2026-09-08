@@ -41,3 +41,7 @@ latest
 sound_log.csv
 nav_state/room_last/
 camera_log.csv
+
+# Aurora930 camera pipeline — compiled binaries (rebuilt by aurora/provision_aurora.sh)
+aurora/aurora_streamer
+aurora/probe

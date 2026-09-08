@@ -1,0 +1,24 @@
+[Unit]
+Description=Aurora930 depth camera pipeline (SDK grabber + HTTP on :8090, mjpg-streamer-compatible)
+# Replaces the Freenove mjpg-streamer as the source for port 8090. car-server.service
+# must NOT also start mjpg-streamer (it runs Main.py without -m) or the two fight for 8090.
+After=network.target
+Conflicts=shutdown.target
+
+[Service]
+Type=simple
+User=astra
+Group=astra
+# libdeptrum dlopens libusb; the 99-deptrum-libusb.rules udev rule makes the
+# device node 0666 so this does not need root.
+WorkingDirectory=/home/astra/robotics/aurora
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/astra/robotics/aurora/aurora-run.sh
+Restart=always
+RestartSec=5
+# aurora-run.sh traps TERM and kills both children
+KillMode=mixed
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
