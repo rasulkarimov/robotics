@@ -62,6 +62,25 @@ the reading matters. `car.radar_sweep()` does a full back-and-forth scan with th
 filtering built in. A flat/thin object lying on the floor may simply not reflect
 the ultrasonic beam at all - don't expect it to "see" every obstacle a camera would.
 
+### `depth.py` - the Aurora930 depth map, a much better near-field range sense
+
+Since 2026-09-09 the wrist camera is an Aurora930 RGB-D and `aurora-camera.service`
+serves its depth map at `:8090/depth`. `depth.py` reads it:
+
+- `depth.py` - readout + ASCII near/far map
+- `depth.py ranges [--json]` - left / centre / right / nearest distances (metres)
+- `depth.py clear [MM]` - exit 0 if >= MM clear ahead (default 400), else 1
+
+It is a 640x400 metric field, not one beam, so it catches things the ultrasonic
+misses and gives per-direction distances in one shot. Two limits, both measured:
+it is **strong at `deck`/`floor` arm pitch** (textured near floor + furniture, ~30%
+coverage, sofa at 0.63 m read true) and **weak at `horizon`** (plain wall + the
+backlit kitchen counter drop coverage to ~9%). Structured light also returns 0
+closer than ~15 cm and past ~4 m. So: use `depth.py` for the near field with the
+arm looking down, keep the ultrasonic for the horizontal far field, and treat a
+low-coverage reading as "don't know", not "clear". The camera is on the arm, so
+aim first (`nav.py lookout --view deck`) then read.
+
 ## Steering and movement - no odometry, weak steering
 
 - `car.steer(direction, angle)` sets front-wheel angle (10-60°, "center" = 90).
