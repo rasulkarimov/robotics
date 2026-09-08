@@ -1,0 +1,20 @@
+[Unit]
+Description=Net watchdog: recover the wifi-connected-but-no-internet hang, restart claude-remote on recovery
+# Deliberately depends on nothing and does its own wifi/internet probing (see the
+# docstring in net_watchdog.py), so it stays useful even when the network stack
+# or health-log.service is the thing that is wedged.
+After=network.target
+
+[Service]
+Type=simple
+# Runs as root on purpose: it restarts NetworkManager, can `systemctl reboot`,
+# and reaches the --user claude-remote.service for astra via `sudo -u astra env
+# XDG_RUNTIME_DIR=... systemctl --user restart` (see restart_claude_remote()).
+WorkingDirectory=/home/astra/robotics
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/python3 /home/astra/robotics/net_watchdog.py
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
