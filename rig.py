@@ -38,6 +38,21 @@ GRASP_Z = -75.0        # re-measured 2026-07-27, AFTER the robot fell over and w
                        # (Was -75.0 before 2026-07-19 too, so this rig seems to sit near -75.)
 GRASP_Z_DRIFT = 15.0   # observed spread between measurements; budget for it
 
+# Inner reach limit: the chassis-mounted ultrasonic bracket lives here, and the
+# jaws and wrist catch it before the arm runs out of travel. kin.reachable() says
+# yes inside this radius - it only models the ARM - so nothing in the kinematics
+# stops a servo loop from steering into the robot's own body. It has to be an
+# explicit floor.
+#
+# 140 mm has been the documented advice since a near-catch the user watched. It
+# became a code limit on 2026-09-09, when the user stopped a grasp run because
+# the arm was audibly scratching: "У тебя должна быть запись по поводу
+# безопасного расстояния. Ты уже царапал сейчас." Two attempts at R=128-130 in
+# an earlier drill did NOT snag, so the true limit may be tighter than this and
+# is worth measuring properly - but the cost of being wrong is asymmetric, so
+# the safe number stands until someone measures the real one.
+R_MIN_CHASSIS = 140.0
+
 # The same floor, felt with the jaws OPEN. Closed jaws reach 20 mm LOWER than open ones,
 # because closing swings the fingertips down and in. I did not model this at all, and
 # without it every grasp would have driven the closing jaws hard into the floor - which

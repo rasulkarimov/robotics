@@ -453,11 +453,33 @@ robot "searching the ceiling", because it is staring past the thing at its feet.
 
 So a floor search has three ranges, not one:
 
-| pitch | covers |
-|---|---|
-| **500** | right at the base, under the gripper |
-| 682 `deck` | about a metre of tile |
-| 735 `floor` | 1-3 m |
+| pitch (at `3:237,4:843`) | R of the hand | covers |
+|---|---|---|
+| **500** | 152 mm | right at the base, under the gripper |
+| 682 `deck` | 106 mm | about a metre of tile |
+| 735 `floor` | 78 mm | 1-3 m |
+
+**And 500 is the LOWEST pitch you may hand-command in this family.** Going below
+it walks the hand into the chassis: `5:440` -> R=148, `5:380` -> **R=133**,
+`5:320` -> **R=109**, all at z about -20, i.e. a few centimetres off the floor and
+inside the ultrasonic bracket. On 2026-09-09 the user asked for "чуть ниже", I
+lowered the wrist by hand-picking triplets, and the arm scratched - the user
+stopped the run. It was NOT the aiming loop: its final pose was R=183, outside
+the limit. It was the LOOK poses.
+
+`deck` and `floor` have a small R only because they also tilt the hand up and
+back; do not read their 78-106 mm as licence to sit at that radius with the wrist
+pitched down.
+
+To look lower without going inside, do not lower the pitch - **hold the radius and
+let IK find the pose**: `kin.ik_search(170, 0, 20)` gives `3:104 4:622 5:286` at
+R=170 with a 183 deg (nearly straight down) approach. That is the same downward
+view at a safe radius, and it is one more reason not to hand-pick triplets.
+
+The limit is now enforced in code as `rig.R_MIN_CHASSIS` (140 mm), checked inside
+`pick_eye.goto()` and `goto_vertical()`. Note that **`arm_step` bypasses it** -
+it takes servo values, not a Cartesian target, so any raw pose you type is still
+your own responsibility.
 
 Sweep the base at 500 FIRST when the object was last seen close, and only then
 widen. Do not conclude "not found" from `deck` and `floor` alone.
@@ -574,3 +596,48 @@ before it worked, and each was a wrong assumption first:
 
 Verified: finds the box in four views, including one with the jaws around it, and
 returns None on two bare-floor frames.
+
+### The camera swap invalidated every colour threshold
+
+The Aurora930 replaced the UVC webcam on 2026-09-09. It renders colour very
+differently, and the two masks the grasp depends on were both measured on the old
+camera. Re-measure any threshold before trusting a run.
+
+The blue bar, same physical object, same afternoon:
+
+| | old camera | Aurora930 |
+|---|---|---|
+| hue | 107 | **140** |
+| saturation | 115 | **55** |
+| pixels in `OBJ_LO/OBJ_HI` | 71.7% | **1.2%** |
+
+It fell off the TOP of the old hue range and UNDER its saturation floor at once.
+`OBJ_LO/OBJ_HI` are retuned to `[115,45,40]`-`[155,255,255]`. Saturation can no
+longer separate anything here - the bar reads S=55 against a floor at S=43, and V
+is 140 against 141, identical - so hue does all the work (bar 140, floor 8). The
+upper bound is 155 and not 165 on purpose: at 165 the mask climbs into the
+specular highlight above the bar and drags the centroid off the object.
+
+The RED jaw markers still pass at `S>=60`, and loosening them is the wrong move:
+this tile floor is warm and low-saturation, so `S>=35` let a 115000 px blob of
+FLOOR into the red mask.
+
+**`measure_grasp_pixel` fails when the object covers a jaw pad.** Measured live:
+the stored `GRASP_PIXEL` was (170,146) and the true one is **(328,310)** - 230 px
+apart, the exact "converges perfectly onto the wrong point" trap above. But the
+measurement needs BOTH red pads visible, and after a failed attempt the bar was
+lying across the left one, so it returned None and `grasp_bar` fell back to the
+stale constant. Fix: swing the base onto clean floor, `measure_grasp_pixel()`
+there to set `rig.GRASP_PIXEL`, and only then call `grasp_bar` in the SAME
+process - so even its own failed re-measure falls back to a live value.
+
+### A bar wedged under the gripper cannot be measured, only rescued
+
+Repeated failed attempts pushed the bar under the jaw assembly, at the very
+bottom edge of the frame. The blob then reads area ~3100 and aspect 1.5-1.76
+against `BAR_MIN_ASPECT` 1.9, so `wrist_for_bar` rejects it every time and the
+retry loop pushes it further in. This is the clipped-at-the-frame-edge failure
+this file already warns about, arriving by a different route. When the aspect
+collapses on an object that is plainly elongated, stop and look at a frame
+instead of retrying: the object has probably been moved by the attempts, and the
+answer is to have it placed back in the open, not to try again.

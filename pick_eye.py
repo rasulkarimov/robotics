@@ -79,8 +79,27 @@ PITCH_BAND = 22.0
 _last_pitch = FIXED_PITCH   # pitch actually used by the most recent goto(), for goto_vertical()
 
 
+def _inside_chassis(x, y, who):
+    """True if (x, y) is inside the inner reach limit - see rig.R_MIN_CHASSIS.
+
+    Both goto() and goto_vertical() check this because they are the only two ways
+    a Cartesian target becomes servo commands, and guarding the choke point beats
+    guarding each caller: the aiming loop, the Jacobian probes and the descent all
+    pass through here, and on 2026-09-09 it was NOT the aiming loop's final pose
+    that scratched (that landed at R=182) but something on the way to it.
+    """
+    r = math.hypot(x, y)
+    if r < rig.R_MIN_CHASSIS:
+        print(f"  ОТКАЗ {who}: R={r:.0f} мм внутри предела шасси "
+              f"{rig.R_MIN_CHASSIS:.0f} мм")
+        return True
+    return False
+
+
 def goto(x, y, z, ms=1200):
     global _last_pitch
+    if _inside_chassis(x, y, "goto"):
+        return False
     sol = kin.ik_search(x, y, z, pitch_lo=FIXED_PITCH - PITCH_BAND,
                         pitch_hi=FIXED_PITCH + PITCH_BAND, prefer=FIXED_PITCH)
     if not sol:
@@ -102,6 +121,8 @@ def goto_vertical(x, y, z, ms=1200):
     one exact value removes that other degree of freedom, so a z-only change moves the claw
     close to straight up/down. Costs some reachability at the edges of the workspace - use
     goto() there instead."""
+    if _inside_chassis(x, y, "goto_vertical"):
+        return False
     sol = kin.ik(x, y, z, _last_pitch)
     if not sol:
         return False
@@ -123,8 +144,25 @@ def goto_vertical(x, y, z, ms=1200):
 #
 # Colour fixes it outright: exactly one blue blob in the frame, nothing else close.
 # It must not be RED - that is taken by the jaw markers.
-OBJ_LO = np.array([95, 80, 50])
-OBJ_HI = np.array([130, 255, 255])
+# RETUNED 2026-09-09 for the Aurora930, which replaced the UVC webcam. The old
+# window (H 95-130, S>=80) was measured on the previous camera and the SAME blue
+# bar fails it on BOTH axes now: this sensor renders the bar at H=140, S=55, so
+# it fell off the top of the hue range and under the saturation floor at once.
+# It caught 1.2% of the frame - a fragment of the bar's darkest end - where the
+# old camera got 71.7%.
+#
+# Saturation can no longer separate anything here: the bar reads S=55 against a
+# floor at S=43, and V is 140 vs 141, i.e. identical. Hue does all the work -
+# bar 140, floor 8 - so the floor is rejected on hue whatever the S floor is,
+# and S>=45 exists only to drop washed-out pixels.
+#
+# The upper bound is 155 rather than 165 deliberately: at 165 the mask ran up
+# into the specular highlight above the bar and pulled the centroid off the
+# object (bbox 100x215 starting 55 px above the bar, centroid above its middle).
+# At 155 the box lands on the bar itself (74x158, centroid (351,266)).
+# Verified against a bare-floor patch: 40 px of 13200 (0.3%).
+OBJ_LO = np.array([115, 45, 40])
+OBJ_HI = np.array([155, 255, 255])
 OBJ_MIN_AREA, OBJ_MAX_AREA = 400, 90000
 
 # ...and colour ALONE is not enough in this workspace. The power strip sits in frame and its
@@ -488,6 +526,24 @@ def servo(x, y, z, iters, tol_px, label="", see_fn=None):
             mv = mv * (MAX_STEP_MM / n)
 
         nx, ny = x + float(mv[0]), y + float(mv[1])
+
+        # HARD FLOOR ON REACH. Inside ~140 mm the jaws and wrist reach the
+        # chassis-mounted ultrasonic bracket. The skill has carried "keep
+        # R >= 140" as advice since a near-catch the user watched; on 2026-09-09
+        # the user had to stop a run because the arm was audibly scratching, and
+        # advice in a document does not stop a servo loop. `kin.reachable` only
+        # asks whether the ARM can get there, and the answer inside the chassis
+        # is yes - which is exactly the problem. Slide the step along to the
+        # boundary rather than refusing it, so the loop keeps steering instead of
+        # dying whenever the object sits near the inner limit.
+        nr = math.hypot(nx, ny)
+        if nr < rig.R_MIN_CHASSIS:
+            if nr < 1e-6:
+                print(f"  {label}: шаг ведёт в ось базы, отказ")
+                return None
+            nx, ny = nx * rig.R_MIN_CHASSIS / nr, ny * rig.R_MIN_CHASSIS / nr
+            print(f"  {label}: R {nr:.0f} -> зажат до {rig.R_MIN_CHASSIS:.0f} мм (шасси)")
+
         if not kin.reachable(nx, ny, z) or not goto(nx, ny, z, 900):
             # Do NOT pretend this succeeded. Returning the position anyway let the caller
             # clamp on thin air and then solemnly carry an imaginary object around - the
