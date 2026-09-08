@@ -378,10 +378,17 @@ def find_camera_device():
 
 
 def restart_camera():
-    """The mjpg-streamer camera can hang on its own (port 8090 times out while the
-    command port still answers) - usually after the USB camera is physically moved.
-    Kill just the streamer and relaunch it on whatever device the camera landed on,
-    leaving Main.py alone."""
+    """Bring port 8090 back, leaving Main.py alone.
+
+    Since 2026-09-09 the camera is the Aurora930 behind aurora-camera.service, so
+    restarting the unit is the whole job - there is no /dev/video* to hunt for,
+    because the Aurora is not a UVC device. The mjpg-streamer path below is kept
+    for a rig that still has the old webcam, and is dead code on this one."""
+    if _camera_unit_exists():
+        subprocess.run(["sudo", "systemctl", "restart", CAMERA_UNIT])
+        time.sleep(4)
+        print(f"camera ({CAMERA_UNIT}) restarted")
+        return
     pids = subprocess.run(["pgrep", "mjpg_streamer"], capture_output=True, text=True).stdout.split()
     if pids:
         subprocess.run(["sudo", "kill", "-9", *pids])
@@ -450,12 +457,34 @@ SLEEP_MARKER = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             ".asleep")
 
 
+CAMERA_UNIT = "aurora-camera.service"
+
+
+def _camera_unit_exists():
+    r = subprocess.run(["systemctl", "list-unit-files", CAMERA_UNIT],
+                       capture_output=True, text=True)
+    return CAMERA_UNIT in r.stdout
+
+
 def stop_camera():
-    """Kill mjpg-streamer without touching Main.py, so the command port stays up."""
+    """Stop whatever is serving port 8090, without touching Main.py.
+
+    Since 2026-09-09 that is aurora-camera.service (the Aurora930 grabber plus its
+    HTTP shim), not mjpg-streamer - the UVC webcam is gone and its binary with it.
+    `sleep` exists to stop the camera drawing from a pack the Pi shares, so this
+    had to learn the new name or a nap would have saved nothing at all.
+    Systemd's Restart=always does not fight an explicit stop, so this stays off
+    until `wake` or a reboot.
+    """
+    if _camera_unit_exists():
+        subprocess.run(["sudo", "systemctl", "stop", CAMERA_UNIT])
+        time.sleep(0.5)
+        print(f"camera ({CAMERA_UNIT}): stopped")
+        return
     pids = subprocess.run(["pgrep", "mjpg_streamer"],
                           capture_output=True, text=True).stdout.split()
     if not pids:
-        print("camera (mjpg-streamer): already stopped")
+        print("camera: already stopped")
         return
     subprocess.run(["sudo", "kill", "-9", *pids])
     time.sleep(0.5)
