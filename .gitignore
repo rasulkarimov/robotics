@@ -45,3 +45,7 @@ camera_log.csv
 # Aurora930 camera pipeline — compiled binaries (rebuilt by aurora/provision_aurora.sh)
 aurora/aurora_streamer
 aurora/probe
+
+# Runtime marker written by `car.py sleep`, removed by `wake`. Machine state, not
+# repo state - committing it would tell the next clone the robot is napping.
+.asleep
