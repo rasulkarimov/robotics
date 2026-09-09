@@ -1,0 +1,22 @@
+[Unit]
+Description=Health telemetry: throttling/undervolt flags, CPU temp, wifi, internet (5s)
+# This robot has rebooted on its own under arm load more than once, and before
+# health_log.py existed there was nothing to look at afterwards. Every row is
+# fsynced AND echoed to stdout, so journald holds an independent second copy -
+# the CSV itself did not survive one unclean shutdown.
+After=network.target
+
+[Service]
+Type=simple
+User=astra
+Group=astra
+WorkingDirectory=/home/astra/robotics
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+# Deliberately does NOT touch the arm's USB HID: it must never contend with
+# arm.py for exclusive access to the board during a grasp.
+ExecStart=/usr/bin/python3 /home/astra/robotics/health_log.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -25,6 +25,7 @@ import csv
 import math
 import os
 import subprocess
+import re
 import sys
 import threading
 import time
@@ -60,6 +61,41 @@ MAX_WAKES_PER_HOUR = 6
 # operator cannot recharge itself yet (ladder step 6). Below this, log the
 # event and stay quiet.
 BATT_MIN_V = 6.9
+
+
+def capture_devices():
+    """ALSA capture cards, as (index, name). Empty means the robot has no ears."""
+    out = subprocess.run(["arecord", "-l"], capture_output=True, text=True).stdout
+    return re.findall(r"^card (\d+): (\S+)", out, re.M)
+
+
+def require_microphone(device=DEVICE):
+    """Exit LOUDLY when there is nothing to listen with.
+
+    `arecord` on a missing device just closes its pipe, so `_reader` returned no
+    windows, `watch` fell off the end of its loop, and the process exited 0 -
+    "success" for "I cannot hear anything". Under Restart=always that became a
+    silent flap every 10 s that looked, from systemctl, exactly like a service
+    doing its job.
+
+    It is not hypothetical: the microphone lived on the old UVC webcam
+    (349c:3307), and when that was replaced by the Aurora930 on 2026-09-09 the
+    robot lost its ears entirely - `arecord -l` lists only HDMI and headphone
+    PLAYBACK devices, no capture at all. sound-watch was disabled for that
+    reason, and this check is what makes the reason visible next time.
+    """
+    devs = capture_devices()
+    if not devs:
+        print("NO CAPTURE DEVICE: arecord -l lists no microphone. The mic was on "
+              "the old USB webcam; the Aurora930 does not carry one. Nothing to "
+              "listen with.", file=sys.stderr)
+        sys.exit(3)
+    want = re.search(r"(\d+)", device)
+    if want and want.group(1) not in [i for i, _ in devs]:
+        print(f"device {device} is not present. Capture cards found: "
+              f"{', '.join(f'{i}:{n}' for i, n in devs)}", file=sys.stderr)
+        sys.exit(3)
+    return devs
 
 
 def _reader(device=DEVICE):
@@ -302,6 +338,7 @@ def cmd_calibrate(args):
 
 
 def cmd_watch(args):
+    require_microphone(args.device)
     last_wake = 0.0
     wakes = []
     armed = True          # rising-edge detector: re-arms once the room goes quiet
