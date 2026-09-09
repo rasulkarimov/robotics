@@ -389,6 +389,18 @@ def wiggle_held_test(log=print):
     moves. A held object is rigid to the wrist camera (a few px); one still on the floor
     slides 50-300px from parallax. Returns (held, shift1, shift2). Trust THIS, never the
     gripper servo reading (proven to overlap between hit and miss)."""
+    # STRAIGHTEN THE WRIST FIRST. With the wrist rotated for a tangential grasp the
+    # held bar swings to the edge of the frame and behind the jaw hardware, and
+    # see() returns None - so s1/s2 come back None and this function declares
+    # "NOT held" about a perfectly good grasp. grasp_bar then opens the jaws and
+    # drops what it was already holding. Measured 2026-09-09: a rotated grasp
+    # (servo2=645, stall 643) was unjudgeable here, and reading 0 px - a textbook
+    # hold - the moment the wrist went back to NEUTRAL. Rotating a HELD object is
+    # safe; it is what the place routine does anyway.
+    w0 = orbit.get_servo(2)
+    if abs(w0 - NEUTRAL) > 20:
+        pe.arm_step(f"2:{NEUTRAL}", 900); time.sleep(0.6)
+        log(f"    [wiggle] wrist {w0} -> {NEUTRAL} so the bar is not clipped out of frame")
     b0 = orbit.get_servo(6)
     p1 = pe.see()
     pe.arm_step(f"6:{b0 + 40}", 700); time.sleep(0.3)
@@ -398,6 +410,9 @@ def wiggle_held_test(log=print):
     s1 = math.dist(p1, p2) if (p1 and p2) else None
     s2 = math.dist(p2, p3) if (p2 and p3) else None
     held = s1 is not None and s1 < 15 and s2 is not None and s2 < 15
+    if s1 is None or s2 is None:
+        # Do not let "I could not see it" masquerade as "it is not held".
+        log("    [wiggle] LOST SIGHT of the object - this is UNPROVEN, not a miss")
     log(f"    [wiggle] shifts=({s1}, {s2}) -> {'HELD' if held else 'NOT held'}")
     return held, s1, s2
 
