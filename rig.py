@@ -147,3 +147,37 @@ GRASP_PIXEL = (170.0, 146.0)   # midpoint of the two jaw markers with the jaws C
 #     frame, ~314 px apart, not ~25
 #   - with the jaws wide open, one of them swings out of frame entirely
 # They live in calib.py; this note exists so the next surprise is not a surprise.
+
+
+# CLOSE 5 MM LOWER THAN THE AIM SUGGESTS.
+# User, 2026-09-09, after watching four grasps stall at 678-679 (the empty-jaw
+# value) with the lateral aim already perfect at dx = +1 px: "тебе надо смыкать
+# на 0,5 см ниже". Applied on the next attempt and it caught the bar first try,
+# stall 629 at z = -87.9.
+#
+# Worth understanding rather than just obeying: a pixel aim cannot see this axis
+# at all. dx and dy in the image both fall out of the SAME horizontal geometry,
+# so a perfect on-screen aim says nothing about whether the jaws will close above
+# the object or around it. Every failure that night looked like a good aim.
+GRASP_Z_CLOSE_OFFSET = -5.0   # add to the descent target before clamping
+
+
+# THE BAG BY THE BALCONY DOOR IS 20 CM TALL, AND THAT PUTS IT OUT OF REACH.
+# Measured consequence, not an opinion: with the floor at GRASP_Z the rim top
+# sits at z = +127, and kin.max_reach collapses there -
+#     z=+100 -> 201 mm      window R = 140..201
+#     z=+120 -> 171 mm      window R = 140..171
+#     z=+127 -> 145 mm      window R = 140..145   <- 5 mm wide
+#     z=+140 ->   0 mm      nothing
+# So clearing that rim leaves a 5 mm corridor between R_MIN_CHASSIS and the edge
+# of the envelope. On a chassis with no odometry that is not a tolerance anyone
+# can hit. The bar ended up ON the rim twice, which is the correct outcome of
+# trying anyway.
+#
+# And the wrist camera never sees the opening from beside a rim that tall - every
+# frame is the outer wall - so no colour measure can distinguish "over the bag"
+# from "over the hole". Both attempts failed on exactly that.
+#
+# To make this task solvable: a bag with a rim under ~10 cm, or one flattened so
+# the opening is wide and low. Not a tuning problem.
+BAG_RIM_TOO_TALL_MM = 200
