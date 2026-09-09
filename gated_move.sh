@@ -20,7 +20,7 @@
 set -uo pipefail
 REPO="$(cd "$(dirname "$0")" && pwd)"
 ACTION="${1:-}"; shift || true
-case "$ACTION" in drive|turn) ;; *) echo "usage: $0 {drive|turn} [--skip-human] -- <car.py args...>" >&2; exit 64;; esac
+case "$ACTION" in drive|turn|nudge) ;; *) echo "usage: $0 {drive|nudge|turn} [--skip-human] -- <car.py args...>" >&2; exit 64;; esac
 GATE_ARGS=()
 while [ $# -gt 0 ] && [ "$1" != "--" ]; do GATE_ARGS+=("$1"); shift; done
 [ "${1:-}" = "--" ] || { echo "missing -- separating gate args from the move" >&2; exit 64; }
@@ -35,5 +35,16 @@ if [ $rc -ne 0 ]; then
     python3 -c "import json;d=json.load(open('/tmp/gate.json'));print('  blocks :',d.get('blocks'));print('  unknown:',d.get('unknown'))" 2>/dev/null
     exit $rc
 fi
+# STEERING IS NOT STICKY IN THE CALLER'S HEAD BUT IT IS IN THE HARDWARE.
+# car.py step leaves the front wheels wherever the previous move put them when no
+# --steer is given, so every "straight" move issued after an arc silently curves.
+# That is how a 5 cm correction wandered sideways all evening. User, 2026-09-09:
+# "Ты каждый раз при движении должен понимать куда ставишь колеса."
+# So: not specifying the steering now MEANS straight, which is what every caller
+# has always meant by it.
+case " $* " in
+    *" --steer "*) ;;                       # caller was explicit, leave it alone
+    *"step"*) set -- "$@" --steer center ;; # only `step` takes --steer
+esac
 echo "gate $ACTION -> $verdict, executing: car.py $*"
 exec python3 "$REPO/car.py" "$@"

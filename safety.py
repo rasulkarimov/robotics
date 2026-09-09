@@ -40,6 +40,21 @@ BATT_STOP = 6.8     # stop moving at all
 CLEAR_DRIVE_CM = 25.0
 CLEAR_TURN_CM = 45.0
 
+# A third regime, added 2026-09-09 at the user's insistence and they were right:
+# "Ты сейчас не катаешься а работаешь с предметом, тебе нужно подкорректировать
+# свое положение."
+#
+# The two thresholds above answer "is there room to TRAVEL". They are wrong for
+# positioning against something you are deliberately working on, where the close
+# object IS the target: the robot was 16 cm from an open bag it was trying to
+# drop a bar into, and a 25 cm rule made the task impossible by construction.
+#
+# So a nudge is its own action, and it is narrow on purpose: a few centimetres,
+# under supervision, with the bumper still refusing anything inside genuine
+# collision range. It buys a working distance, not permission to drive.
+CLEAR_NUDGE_CM = 8.0
+NUDGE_MAX_CM = 10.0
+
 # How far the robot may travel on memory alone between two looks at the world.
 MAX_BLIND_MM = 400
 
@@ -269,7 +284,7 @@ def preflight(action, skip_human=False, direction="forward", rear_cm=None):
     actually measured, e.g. by aiming the arm camera at the rear quarters and
     reading depth.py. There is no sensor that does this on its own.
     """
-    need = CLEAR_TURN_CM if action == "turn" else CLEAR_DRIVE_CM
+    need = {"turn": CLEAR_TURN_CM, "nudge": CLEAR_NUDGE_CM}.get(action, CLEAR_DRIVE_CM)
     report = {"action": action, "need_cm": need, "blocks": [], "unknown": []}
 
     v = read_battery()
@@ -299,9 +314,17 @@ def preflight(action, skip_human=False, direction="forward", rear_cm=None):
     report["direction"] = direction
     if close and not stuck and direction == "forward":
         nearest = min(close.values())
-        report["blocks"].append(
-            f"ultrasonic bumper: something at {nearest} cm "
-            f"(trusted range is under {SONAR_TRUST_CM:.0f} cm)")
+        # SONAR_TRUST_CM decides which readings are BELIEVABLE; `need` decides
+        # which are too close to move. Conflating them made the bumper refuse a
+        # nudge at 11 cm against an 8 cm floor - it was applying the trust range
+        # as if it were the limit, so no action could ever be closer than 30 cm
+        # to anything, which defeats the whole point of a manipulation nudge.
+        if nearest < need:
+            report["blocks"].append(
+                f"ultrasonic bumper: something at {nearest} cm < {need} cm "
+                f"required to {action}")
+        else:
+            report["note_bumper_cm"] = nearest
     elif close and direction == "backward":
         report["note_forward_obstacle_cm"] = min(close.values())
 
@@ -379,7 +402,9 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     pf = sub.add_parser("preflight", help="full gate; run before every motion")
-    pf.add_argument("action", choices=["drive", "turn"])
+    pf.add_argument("action", choices=["drive", "turn", "nudge"],
+                    help="nudge = a few cm of positioning against an object you are "
+                         "working on, not travel; see CLEAR_NUDGE_CM")
     pf.add_argument("--direction", choices=["forward", "backward"], default="forward",
                     help="which way the move goes; every sensor here faces forward")
     pf.add_argument("--rear-cm", type=float, default=None,
