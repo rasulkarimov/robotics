@@ -303,5 +303,117 @@
   "how_measured": "Aurora930 depth map via depth.py sectors(); 'nearest' is the 5th percentile of non-zero depths in the central band, in mm. Arm swept on servo 6 only, at the named deck/horizon pitches.",
   "trust": "Coverage is the confidence. Readings under ~15% coverage are NOT usable - bearing 470 horizon reads 1.28 m at 3% coverage and means nothing. The high-coverage readings (630/710, 55-78%) are the sofa and are solid.",
   "frames_location": "nav_state/frames/ - deliberately NOT /tmp, which is what destroyed every earlier place record."
+ },
+ "tv_console_survey_2026_09_09": {
+  "recorded": "2026-09-09T20:14:51",
+  "description": "Rough room survey from in front of the TV console, three headings produced by three forward arcs (speed 60, 0.6 s, steer right 45).",
+  "landmarks_visible_in_cited_frames": {
+   "wall_tv_on_wooden_slat_panel": "right side of every heading; white low console beneath it",
+   "balcony_glass_door_and_curtains": "centre-right; dark behind it (night)",
+   "wooden_bench_table": "centre",
+   "tall_floor_lamp": "centre-left, badly overexposed in every frame",
+   "grey_sofa": "appears at the far left from heading h2 onward, nearest 0.74 m at h3"
+  },
+  "headings": {
+   "h1": {
+    "170": {
+     "near_mm": 1226,
+     "coverage": 0.543,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h1_b170.jpg"
+    },
+    "290": {
+     "near_mm": 1121,
+     "coverage": 0.597,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h1_b290.jpg"
+    },
+    "410": {
+     "near_mm": 1091,
+     "coverage": 0.556,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h1_b410.jpg"
+    },
+    "530": {
+     "near_mm": 1190,
+     "coverage": 0.695,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h1_b530.jpg"
+    },
+    "650": {
+     "near_mm": 1314,
+     "coverage": 0.58,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h1_b650.jpg"
+    },
+    "770": {
+     "near_mm": 1201,
+     "coverage": 0.377,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h1_b770.jpg"
+    }
+   },
+   "h2": {
+    "170": {
+     "near_mm": 844,
+     "coverage": 0.77,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h2_b170.jpg"
+    },
+    "290": {
+     "near_mm": 1057,
+     "coverage": 0.539,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h2_b290.jpg"
+    },
+    "410": {
+     "near_mm": 948,
+     "coverage": 0.581,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h2_b410.jpg"
+    },
+    "530": {
+     "near_mm": 1023,
+     "coverage": 0.549,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h2_b530.jpg"
+    },
+    "650": {
+     "near_mm": 1076,
+     "coverage": 0.723,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h2_b650.jpg"
+    },
+    "770": {
+     "near_mm": 1218,
+     "coverage": 0.586,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h2_b770.jpg"
+    }
+   },
+   "h3": {
+    "170": {
+     "near_mm": 744,
+     "coverage": 0.822,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h3_b170.jpg"
+    },
+    "290": {
+     "near_mm": 762,
+     "coverage": 0.791,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h3_b290.jpg"
+    },
+    "410": {
+     "near_mm": 877,
+     "coverage": 0.566,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h3_b410.jpg"
+    },
+    "530": {
+     "near_mm": 786,
+     "coverage": 0.56,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h3_b530.jpg"
+    },
+    "650": {
+     "near_mm": 1080,
+     "coverage": 0.523,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h3_b650.jpg"
+    },
+    "770": {
+     "near_mm": 1074,
+     "coverage": 0.745,
+     "frame": "/home/astra/robotics/nav_state/frames/map_h3_b770.jpg"
+    }
+   }
+  },
+  "how_measured": "Aurora930 depth via depth.py sectors(); 'near' is the 5th percentile of non-zero depths in the central band. Neck swept on servo 6 only, floor pitch.",
+  "trust": "Coverage 38-82% throughout, so these ranges are usable. The HEADINGS ARE NOT MEASURED - depth_odom refused the arc (margin 5.5 mm < 20) because an arc is rotation plus translation and the 1D range profile changes shape, not just shifts. So this is a qualitative survey: the order of landmarks is right, the angles are not.",
+  "frames_location": "nav_state/frames/map_h{1,2,3}_b*.jpg"
  }
 }
