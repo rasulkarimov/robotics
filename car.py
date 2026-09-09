@@ -124,11 +124,18 @@ def stop():
     send(">Move Stop")
 
 
+# The mechanical stop is 60. Do NOT command it: at full lock the front wheels
+# foul their own arches ("подкрылки цепляют передние при повороте", user,
+# 2026-09-09). 54 leaves the ~10% of travel they asked for, and costs nothing -
+# the arcs measured this session all ran at 45 and turned the body ~15 deg each.
+STEER_MAX_SAFE = 54
+
+
 def steer(direction, angle):
     if direction == "center":
         send(">Turn Center90")
         return
-    angle = max(10, min(60, int(angle)))
+    angle = max(10, min(STEER_MAX_SAFE, int(angle)))
     word = "Left" if direction == "left" else "Right"
     send(f">Turn {word}{angle}")
 
@@ -160,7 +167,7 @@ def step(direction, speed, duration, path, settle=0.15, steer_dir=None, steer_an
         if steer_dir == "center":
             s.sendall(b">Turn Center90")
         elif steer_dir in ("left", "right"):
-            angle = max(10, min(60, int(steer_angle)))
+            angle = max(10, min(STEER_MAX_SAFE, int(steer_angle)))
             word = "Left" if steer_dir == "left" else "Right"
             s.sendall(f">Turn {word}{angle}".encode())
         word = "Forward" if direction == "forward" else "Backward"
