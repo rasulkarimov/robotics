@@ -51,14 +51,30 @@ FORWARD_ANGLES = (75, 90, 105)
 # cannot fire on a true measurement.
 STUCK_EPS_CM = 0.05
 
-# Depth (Aurora930 RGB-D, served by aurora-camera.service on :8090/depth).
-# It does NOT replace the ultrasonic - the two are blind to different things and
-# the gate wants both:
-#   * the ultrasonic is one narrow beam, drops echoes, and cannot see a flat or
-#     thin object lying on the floor, but it does read right down to a few cm;
-#   * the depth map is a 640x400 metric field that catches those objects, but
-#     structured light returns nothing closer than ~15 cm or past ~4 m.
-# So depth may only ever ADD a block or an unknown here. It can never clear one.
+# THE SONAR IS A BUMPER, NOT A RANGEFINDER.
+# User, 2026-09-09: "Не ориентируйся на сонар. Если только для избежания
+# столкновения, дальше 30 см он не работает."
+#
+# This invalidates how this gate worked all evening. CLEAR_TURN_CM is 45, and a
+# sensor that is meaningless past 30 cm can never honestly satisfy it - so every
+# turn verdict derived from a sonar number above 30 was noise, whether it blocked
+# or allowed. Beyond this range a reading is NOT distance and must not be read as
+# "there is room"; it is simply no information.
+#
+# So: depth is the primary clearance sense (validated 0.15-4 m, with coverage as
+# its confidence), and the sonar may only ever ADD a block when it reports
+# something genuinely close. It can no longer clear anything.
+SONAR_TRUST_CM = 30.0
+
+# Depth (Aurora930 RGB-D, served by aurora-camera.service on :8090/depth) is the
+# PRIMARY clearance sense, as of 2026-09-09 - see SONAR_TRUST_CM for why it had to
+# take over. It is a 640x400 metric field, validated from ~0.15 m to ~4 m, and
+# `min_cm` in the report is now its number.
+#
+# Its own blind spots, both measured, and both why the sonar bumper stays:
+#   * nothing inside ~15 cm, which is exactly where a collision happens;
+#   * a NARROW VERTICAL object is under-weighted, because the sector figure is a
+#     percentile over a wide band and most of that band sees past a thin pole.
 DEPTH_MIN_COVERAGE = 0.18
 # Measured 2026-09-09, five samples each and stable to a few tenths of a percent:
 # arm folded/home (the pose a drive is supposed to start from, looking at the
@@ -263,27 +279,25 @@ def preflight(action, skip_human=False):
         report["unknown"].append(
             f"ultrasonic frozen: {len(raws)} readings across "
             f"{len(readable)} bearings all equal {raws[0]} cm - not a measurement")
-    if not readable:
-        report["unknown"].append("no ultrasonic bearing answered")
-    elif stuck:
-        pass  # a frozen constant is not a clearance; do not derive min_cm from it
-    else:
-        worst = min(readable.values())
-        report["min_cm"] = worst
-        if worst < need:
-            report["blocks"].append(
-                f"nearest obstacle {worst} cm < {need} cm required to {action}")
-        if len(readable) < len(dist):
-            report["unknown"].append(
-                "bearings with no echo: "
-                + ",".join(str(a) for a, d in dist.items() if d is None))
 
+    # Sonar as a bumper only: a reading inside SONAR_TRUST_CM is a real object
+    # and blocks; anything beyond it carries no information and is ignored.
+    close = {a: d for a, d in readable.items() if d < SONAR_TRUST_CM}
+    report["sonar_close_cm"] = close or None
+    if close and not stuck:
+        nearest = min(close.values())
+        report["blocks"].append(
+            f"ultrasonic bumper: something at {nearest} cm "
+            f"(trusted range is under {SONAR_TRUST_CM:.0f} cm)")
     d_cm, d_cov, d_note = depth_clearance()
     report["depth_cm"] = d_cm
     report["depth_coverage"] = d_cov
     if d_cm is None:
-        report["unknown"].append(f"depth map {d_note}")
+        report["unknown"].append(
+            f"depth map {d_note} - and it is now the PRIMARY clearance sense, "
+            "since the sonar is only trusted as a close-range bumper")
     else:
+        report["min_cm"] = d_cm          # the number the verdict actually rests on
         if d_cm < need:
             report["blocks"].append(
                 f"depth sees a surface at {d_cm:.0f} cm < {need} cm required to {action}")
