@@ -255,8 +255,20 @@ def log_row(action, verdict, detail):
                     json.dumps(detail, ensure_ascii=False)])
 
 
-def preflight(action, skip_human=False):
-    """action: 'drive' or 'turn'. Returns (exit_code, report dict)."""
+def preflight(action, skip_human=False, direction="forward", rear_cm=None):
+    """action: 'drive' or 'turn'. Returns (exit_code, report dict).
+
+    `direction` matters because every sensor on this robot faces FORWARD. The
+    ultrasonic bumper is mounted at the front, so it says nothing whatever about
+    reverse - and on 2026-09-09 a version of this gate that ignored direction
+    blocked the robot from backing AWAY from the glass door it was 24 cm from,
+    while also (correctly) blocking it from going forward. A gate that leaves no
+    legal move is not a safety device, it is a trap.
+
+    For a reverse the caller must supply `rear_cm` - a rear clearance it has
+    actually measured, e.g. by aiming the arm camera at the rear quarters and
+    reading depth.py. There is no sensor that does this on its own.
+    """
     need = CLEAR_TURN_CM if action == "turn" else CLEAR_DRIVE_CM
     report = {"action": action, "need_cm": need, "blocks": [], "unknown": []}
 
@@ -284,28 +296,54 @@ def preflight(action, skip_human=False):
     # and blocks; anything beyond it carries no information and is ignored.
     close = {a: d for a, d in readable.items() if d < SONAR_TRUST_CM}
     report["sonar_close_cm"] = close or None
-    if close and not stuck:
+    report["direction"] = direction
+    if close and not stuck and direction == "forward":
         nearest = min(close.values())
         report["blocks"].append(
             f"ultrasonic bumper: something at {nearest} cm "
             f"(trusted range is under {SONAR_TRUST_CM:.0f} cm)")
+    elif close and direction == "backward":
+        report["note_forward_obstacle_cm"] = min(close.values())
+
+    if direction == "backward":
+        report["rear_cm"] = rear_cm
+        if rear_cm is None:
+            report["unknown"].append(
+                "reversing with no rear clearance given - nothing on this robot "
+                "faces backwards; measure it and pass --rear-cm")
+        elif rear_cm < need:
+            report["blocks"].append(
+                f"rear clearance {rear_cm:.0f} cm < {need} cm required to {action}")
     d_cm, d_cov, d_note = depth_clearance()
     report["depth_cm"] = d_cm
     report["depth_coverage"] = d_cov
     if d_cm is None:
-        report["unknown"].append(
-            f"depth map {d_note} - and it is now the PRIMARY clearance sense, "
-            "since the sonar is only trusted as a close-range bumper")
+        # Only an unknown for a FORWARD move: that is the direction depth is the
+        # primary sense for. Reversing is judged on rear_cm, and forward blindness
+        # says nothing about it. Glass is the case that makes this bite - the
+        # Aurora gets zero returns off the balcony door, measured 0% coverage at
+        # 24 cm, so a direction-blind rule would strand the robot against it.
+        if direction == "forward":
+            report["unknown"].append(
+                f"depth map {d_note} - and it is now the PRIMARY clearance sense, "
+                "since the sonar is only trusted as a close-range bumper")
+        else:
+            report["note_depth_forward"] = f"no forward depth ({d_note}); "\
+                                           "irrelevant to a reverse"
     else:
         report["min_cm"] = d_cm          # the number the verdict actually rests on
-        if d_cm < need:
+        if d_cm < need and direction == "forward":
             report["blocks"].append(
                 f"depth sees a surface at {d_cm:.0f} cm < {need} cm required to {action}")
         # Low coverage means the depth map has no opinion. That is only safe to
         # shrug off when the ultrasonic independently reports plenty of room -
         # otherwise "no returns" is exactly what an obstacle inside the camera's
         # ~15 cm blind zone looks like.
-        if d_cov is not None and d_cov < DEPTH_MIN_COVERAGE:
+        # Forward-only, for the same reason as the unreadable case above: this is
+        # a statement about the sense that judges FORWARD travel. Applying it to a
+        # reverse is the second instance of the same bug - a front-facing sensor's
+        # failure forbidding the one direction that leads away from the obstacle.
+        if direction == "forward" and d_cov is not None and d_cov < DEPTH_MIN_COVERAGE:
             us = report.get("min_cm")
             if us is None or us < 2 * need:
                 report["unknown"].append(
@@ -342,6 +380,10 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     pf = sub.add_parser("preflight", help="full gate; run before every motion")
     pf.add_argument("action", choices=["drive", "turn"])
+    pf.add_argument("--direction", choices=["forward", "backward"], default="forward",
+                    help="which way the move goes; every sensor here faces forward")
+    pf.add_argument("--rear-cm", type=float, default=None,
+                    help="rear clearance in cm, measured by the caller - required to reverse")
     pf.add_argument("--skip-human", action="store_true",
                     help="skip the ~60 s person check; only for a motion that "
                          "immediately follows a passed preflight")
@@ -354,7 +396,8 @@ def main():
     args = ap.parse_args()
 
     if args.cmd == "preflight":
-        code, report = preflight(args.action, skip_human=args.skip_human)
+        code, report = preflight(args.action, skip_human=args.skip_human,
+                                 direction=args.direction, rear_cm=args.rear_cm)
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return code
     if args.cmd == "battery":
