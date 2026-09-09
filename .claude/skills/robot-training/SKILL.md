@@ -193,6 +193,16 @@ entry:
   number with nothing behind it is the thing the reviewer looks for first.
 - Copy the frames out of `/tmp` into `nav_state/frames/`. `/tmp` is cleared on
   reboot, and an entry whose evidence has evaporated cannot be checked.
+- **`/tmp` HAS ALREADY DESTROYED EVERY PLACE RECORD ONCE.** Checked 2026-09-09:
+  places.json cited 42 frames, all under `/tmp`, and **0 of 42 still existed** -
+  two reboots had wiped them. Seven places (start_position, window_spot,
+  search_spot_1, charging_spot, box_spot, and both turn calibrations) are now
+  unverifiable and are marked `evidence_status` in the file rather than deleted.
+  Write frames straight into `nav_state/frames/`; never cite a `/tmp` path.
+- Record the RANGE per bearing too, now that depth exists: sweep servo 6 at the
+  named pitches and store `depth.py` nearest + coverage per bearing. That is what
+  makes a place re-findable by matching, instead of by dead reckoning that does
+  not survive here. `sofa_side_2026_09_09` is the worked example.
 - If you looked and did not find the thing, that is a perfectly good result:
   write it in `training_log.csv` and record no place. An entry that claims more
   than the frames show is worse than no entry, because the next run trusts it.
@@ -230,15 +240,29 @@ at the top, written once:
 
 `step` is a LADDER NUMBER, 0-6, never a word: a sound wake is step 0, a grasp is
 step 4. `measured` holds only quantities something actually measured. A distance
-you judged by eye is not a measurement - the sonar faces forward and cannot see
-the bearing the arm is looking at, and the wrist camera has no depth at all - so
-**do not write a distance at all.** Asking for an "estimate" tag did not work -
-three runs in a row wrote "20-40 см", "~1 м", "~60 см" as though they were
-observations. The robot has no way to measure the distance to something the arm
-is pointed at: the sonar faces forward and cannot see that bearing, and the wrist
-camera has no depth. So a distance may only appear when a `car.py ultrasonic`
-reading is quoted beside it. Otherwise describe WHAT you see and WHERE in the
-frame, and leave distance out.
+you judged by eye is still not a measurement, and three runs in a row wrote
+"20-40 см", "~1 м", "~60 см" as though they were observations - one of them after
+an explicit ban. That discipline stands.
+
+**What changed 2026-09-09: the wrist camera now HAS depth.** This rule used to
+say "do not write a distance at all", because the sonar faces forward and cannot
+see the bearing the arm is pointed at, and the old webcam was monocular. The
+Aurora930 is an RGB-D camera and `depth.py` reads a 640x400 metric map, so the
+robot can finally measure the thing it is looking at.
+
+So a distance MAY be written when, and only when, it is quoted with its source:
+
+- `depth.py ranges` / `depth.sectors()` - give the number in mm **and its
+  coverage**. Coverage IS the confidence: measured live, a bearing at 3% coverage
+  read "1.28 m" and meant nothing, while the same sweep's 78% bearing read 0.39 m
+  and was the sofa. **Below ~15% coverage, write "no depth", not a number.**
+- `car.py ultrasonic` - quote the reading. And check it is not frozen first
+  (`safety.py clearance` reports `sonic_stuck`); on 2026-09-09 it returned
+  173.502 cm on fifteen reads across 140 deg of pan.
+
+Depth returns nothing closer than ~15 cm or past ~4 m, so an object at the
+robot's own base still has no measurable distance - that is a "no depth", not a
+guess. Otherwise describe WHAT you see and WHERE in the frame.
 
 Never append a second header, and never reorder the columns. On 2026-08-30 a run
 wrote its own header mid-file plus rows in two different layouts; the file stopped
