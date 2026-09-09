@@ -35,16 +35,26 @@ if [ $rc -ne 0 ]; then
     python3 -c "import json;d=json.load(open('/tmp/gate.json'));print('  blocks :',d.get('blocks'));print('  unknown:',d.get('unknown'))" 2>/dev/null
     exit $rc
 fi
-# STEERING IS NOT STICKY IN THE CALLER'S HEAD BUT IT IS IN THE HARDWARE.
+# STEERING IS REQUIRED, NOT DEFAULTED.
 # car.py step leaves the front wheels wherever the previous move put them when no
 # --steer is given, so every "straight" move issued after an arc silently curves.
-# That is how a 5 cm correction wandered sideways all evening. User, 2026-09-09:
-# "Ты каждый раз при движении должен понимать куда ставишь колеса."
-# So: not specifying the steering now MEANS straight, which is what every caller
-# has always meant by it.
+# That is how a 5 cm correction wandered sideways all evening.
+#
+# This first auto-appended `--steer center`. The user asked for something
+# stronger: "Хорошо бы сделать это обязательным параметром." They are right - a
+# silent default still lets the caller not think about it, and the whole failure
+# was not thinking about it. Now the move is REFUSED unless the steering is
+# stated, so every drive carries a deliberate decision about where the wheels
+# point.
 case " $* " in
-    *" --steer "*) ;;                       # caller was explicit, leave it alone
-    *"step"*) set -- "$@" --steer center ;; # only `step` takes --steer
+    *" --steer "*) ;;
+    *"step"*)
+        echo "REFUSED: --steer is REQUIRED for a step. State it every time:" >&2
+        echo "  --steer center      straight" >&2
+        echo "  --steer left|right --angle N   an arc (N is clamped to STEER_MAX_SAFE)" >&2
+        echo "The wheels keep their last angle otherwise, so an unstated steer is" >&2
+        echo "whatever the previous move left behind - which is how straight moves curve." >&2
+        exit 64 ;;
 esac
 echo "gate $ACTION -> $verdict, executing: car.py $*"
 exec python3 "$REPO/car.py" "$@"
