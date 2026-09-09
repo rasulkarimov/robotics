@@ -109,6 +109,48 @@ def goto(x, y, z, ms=1200):
     return True
 
 
+def goto_verified(x, y, z, ms=1200, tol_mm=2.5, max_corrections=1):
+    """goto(), then CHECK where the arm actually went and correct once.
+
+    The shoulder under-travels under load: commanded 4:550 the arm sat at 557,
+    commanded 3:147 it sat at 145. So a commanded z is a request, not a result -
+    on 2026-09-09 a "rise 5 mm" command moved the hand 1.6 mm DOWN.
+
+    Worse is what happens if you then chase the error in small steps at a FIXED
+    wrist pitch, which is the obvious thing to do: raising z at fixed pitch pulls
+    the solution inward, so each correction trades height for reach and the hand
+    walks toward the chassis. Measured that night: R went 164 -> 158 -> 139.8,
+    i.e. INSIDE rig.R_MIN_CHASSIS, while still sitting on the floor.
+
+    So: command an absolute point, let ik_search pick the pitch, verify by
+    forward kinematics from the ACTUAL servo readings, and apply at most one
+    bounded correction. Never loop until it converges - it does not.
+    """
+    if not goto(x, y, z, ms):
+        return None
+    for _ in range(max_corrections):
+        ax, ay, az = current_xyz()
+        err = z - az
+        if abs(err) <= tol_mm:
+            return ax, ay, az
+        # correct in the SAME absolute frame, and only once
+        if not goto(x, y, z + err, ms):
+            break
+    return current_xyz()
+
+
+def current_xyz():
+    """Where the grasp point actually is, from the servos rather than the command.
+
+    NOTE kin.fk returns (x, y, z) - not (R, z). Reading it as the latter cost an
+    evening of reports that halved every height.
+    """
+    j = {n: int(subprocess.run([ARM, "get", str(n)],
+                               capture_output=True, text=True).stdout.strip())
+         for n in (3, 4, 5, 6)}
+    return kin.fk(j[5], j[4], j[3], j[6])
+
+
 def goto_vertical(x, y, z, ms=1200):
     """Like goto(), but PINS the wrist pitch to whatever goto() last used, instead of
     letting ik_search pick freely within +-PITCH_BAND.
