@@ -151,6 +151,38 @@ def current_xyz():
     return kin.fk(j[5], j[4], j[3], j[6])
 
 
+def place_until_contact(x, y, z_floor, step_mm=6.0, max_mm=90.0, slack=3.0, log=print):
+    """Lower onto a surface until the ARM STOPS DESCENDING, then report the height.
+
+    Placing is not releasing at whatever height you happen to be. On 2026-09-09 a
+    bar was released 7 cm above the bottom of an open bag because the moment was
+    chosen by what filled the CAMERA - "yellow is 39% of the frame, so I am over
+    the mouth" - which is a framing statistic and says nothing about height. The
+    user's verdict: "не нужно было бросать, лучше класть."
+
+    Descending to contact fixes both halves. It reaches the actual surface rather
+    than a guessed height, and it PRODUCES A CHECK: once the object is resting,
+    the commanded z stops being reached, because the object is holding the arm up.
+    A drop gives no such signal, which is why a dropped object cannot be verified.
+
+    Returns (z_reached, contacted). Stops early on contact, or after max_mm.
+    """
+    x0, y0, z0 = current_xyz()
+    target = z0
+    for _ in range(int(max_mm / step_mm)):
+        target -= step_mm
+        if target < z_floor - 20.0:          # never grind below the known floor
+            log(f"    [place] reached the floor limit {z_floor:.0f}")
+            break
+        if not goto(x, y, target, 700):
+            break
+        ax, ay, az = current_xyz()
+        if az - target > slack:              # asked to go lower, did not get there
+            log(f"    [place] CONTACT: asked {target:.0f}, sat at {az:.0f}")
+            return az, True
+    return current_xyz()[2], False
+
+
 def goto_vertical(x, y, z, ms=1200):
     """Like goto(), but PINS the wrist pitch to whatever goto() last used, instead of
     letting ik_search pick freely within +-PITCH_BAND.
