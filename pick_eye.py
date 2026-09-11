@@ -183,6 +183,63 @@ def place_until_contact(x, y, z_floor, step_mm=6.0, max_mm=90.0, slack=3.0, log=
     return current_xyz()[2], False
 
 
+def descend_and_clamp(R, bear, log=print):
+    """Descend to the height grasps actually catch at, clamp ONCE, and stop.
+
+    Three rules, each bought with a failed drill rep on 2026-09-11:
+
+    1. NEVER step lower after an empty clamp. Reps that began at z=-88 and
+       stepped down to -110 stayed empty the whole way, while the reps that held
+       caught at -85. A miss is sideways, not shallow; descending further just
+       presses the jaws past a thin object into the floor, and this arm lifts the
+       car rather than stalling, so nothing stops it.
+    2. Command rig.GRASP_Z_TARGET + GRASP_DESCENT_OVERSHOOT, because the arm
+       under-travels: asked -85, arrived -91, twice running.
+    3. Refuse below rig.GRASP_Z_HARD_FLOOR whatever the arithmetic says.
+
+    Returns (z_reached, stall, caught) - or (z, None, False) if it refused.
+    """
+    cmd_z = rig.GRASP_Z_TARGET + rig.GRASP_DESCENT_OVERSHOOT
+    if not goto_verified(R * math.cos(bear), R * math.sin(bear), cmd_z, ms=1300):
+        return None, None, False
+    z = current_xyz()[2]
+    if z < rig.GRASP_Z_HARD_FLOOR:
+        log(f"  ОТКАЗ: z={z:.1f} ниже жёсткого пола {rig.GRASP_Z_HARD_FLOOR}")
+        return z, None, False
+    arm_step("1:700", 1100)
+    time.sleep(1.3)
+    stall = int(subprocess.run([ARM, "get", "1"], capture_output=True,
+                               text=True).stdout.strip())
+    caught = stall < 660
+    log(f"  зажим {stall} на z={z:.1f} -> {'взял' if caught else 'пусто'}")
+    if not caught:
+        log("  пусто: НЕ опускаюсь ниже - навестись заново, это промах по осям")
+    return z, stall, caught
+
+
+def measure_radius_gain(R, bear, z=-40.0, probe_mm=10.0, log=print):
+    """px of blob movement per mm of reach, measured HERE. None if unusable.
+
+    It is not a constant and it is sometimes zero: probed at the standard grasp
+    pose on 2026-09-11 it came back -0.01 px/mm, so dy could not be corrected by
+    radius there at all. A stale 0.89 px/mm had previously produced a correction
+    that drove the hand into rig.R_MIN_CHASSIS.
+    """
+    p0 = see()
+    if p0 is None:
+        return None
+    if not goto_verified((R + probe_mm) * math.cos(bear),
+                         (R + probe_mm) * math.sin(bear), z, ms=1100):
+        return None
+    p1 = see()
+    goto_verified(R * math.cos(bear), R * math.sin(bear), z, ms=1100)
+    if p1 is None:
+        return None
+    gain = (p1[1] - p0[1]) / probe_mm
+    log(f"  радиус-проба: {probe_mm:+.0f} мм -> dy {p1[1]-p0[1]:+.0f} px = {gain:+.2f} px/мм")
+    return gain if abs(gain) >= rig.RADIUS_GAIN_MIN_USABLE else None
+
+
 def goto_vertical(x, y, z, ms=1200):
     """Like goto(), but PINS the wrist pitch to whatever goto() last used, instead of
     letting ik_search pick freely within +-PITCH_BAND.

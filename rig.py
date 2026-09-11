@@ -181,3 +181,29 @@ GRASP_Z_CLOSE_OFFSET = -5.0   # add to the descent target before clamping
 # To make this task solvable: a bag with a rim under ~10 cm, or one flattened so
 # the opening is wide and low. Not a tuning problem.
 BAG_RIM_TOO_TALL_MM = 200
+
+
+# ==== measured 2026-09-11, from a five-rep drill and the run that followed ====
+#
+# DESCENDING LOWER DOES NOT RESCUE A GRASP. This is the opposite of what I did
+# all through 2026-09-09, and the drill settles it. Three reps started at
+# z = -87.8, -88.8 and -89.6, stepped down to -110, -112 and -98, and the jaw
+# stall never left the empty band (678-683). The two that HELD caught at
+# z = -85.6 and -84.6, i.e. ABOVE where the failures began. A miss is lateral or
+# radial; more depth only presses the jaws past a thin object into the floor -
+# and rig.py's own note says the arm lifts the whole car rather than stalling, so
+# "step lower until it catches" is not a search, it is a press.
+GRASP_Z_TARGET = -85.0        # where grasps actually catch on this rig today
+GRASP_Z_HARD_FLOOR = -95.0    # never command below this; it blocked a -110 press
+
+# The descent under-travels by about this much: commanded -85, arrived -91, twice.
+# Subtract it from the command so the arm lands where you meant.
+GRASP_DESCENT_OVERSHOOT = 6.0
+
+# THE RADIUS GAIN CAN BE ZERO. Probed live at the standard grasp pose: +10 mm of
+# reach moved the blob -0 px, i.e. -0.01 px/mm. So dy is NOT correctable by
+# radius at that pose, and every "radius correction" computed from a stale
+# 0.89 px/mm was noise - one of them walked the hand into R_MIN_CHASSIS. Measure
+# the gain where you will use it, and if it comes back under ~0.3 px/mm, do not
+# correct dy at all; proceed and let the clamp decide.
+RADIUS_GAIN_MIN_USABLE = 0.3

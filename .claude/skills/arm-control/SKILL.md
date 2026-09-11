@@ -641,3 +641,49 @@ this file already warns about, arriving by a different route. When the aspect
 collapses on an object that is plainly elongated, stop and look at a frame
 instead of retrying: the object has probably been moved by the attempts, and the
 answer is to have it placed back in the open, not to try again.
+
+### Descending lower does not rescue a grasp — it presses the arm into the floor
+
+Five-rep drill, 2026-09-11. Two held, three failed, and the failures are the
+useful half:
+
+| rep | dx converged to | descended | stall | result |
+|---|---|---|---|---|
+| 1 | **+2 px** | -87.8 → -110.8 | 683→678 | empty at every height |
+| 2 | +9 px | -85.6 | **639** | held, wiggle 2.4 px |
+| 3 | -2 px | -84.6 | **640** | held, wiggle 0.5 px |
+| 4 | never saw it | -88.7 → -112.5 | 682→678 | empty |
+| 5 | never saw it | -89.6 → -97.8 | 681→678 | empty |
+
+The two that HELD caught **higher** than where the failures began. Rep 1 had a
+near-perfect lateral aim, +2 px, and 25 mm of extra descent bought nothing. So a
+miss is lateral or radial; depth never fixes it. And this arm lifts the car
+rather than stalling, so "step lower until it catches" is not a search, it is a
+press — reps 1 and 4 ended 35 mm below the measured floor.
+
+`rig.GRASP_Z_TARGET` (-85), `GRASP_Z_HARD_FLOOR` (-95) and
+`pick_eye.descend_and_clamp()` encode this: one clamp, at one height, and an
+empty clamp means go back and re-aim.
+
+**Reps 4 and 5 were my own bug, and worth naming.** Their `dx` sequence is
+EMPTY — `see()` returned None at the align height, so no aim ever happened, and
+the code clamped anyway. A grasp routine must refuse to close when alignment did
+not occur; "I could not see it" is not "it is probably fine".
+
+### The radius gain is sometimes ZERO — measure it, do not carry it
+
+Probed at the standard grasp pose on 2026-09-11: **+10 mm of reach moved the blob
+-0 px, i.e. -0.01 px/mm.** dy simply is not correctable by radius there. A stale
+0.89 px/mm (measured at a different pose) had earlier produced a correction that
+walked the hand into `rig.R_MIN_CHASSIS`, and another that threw the target out
+of frame entirely.
+
+`pick_eye.measure_radius_gain()` probes it live and returns None below
+`rig.RADIUS_GAIN_MIN_USABLE`; when it returns None, leave dy alone and let the
+clamp decide rather than "correcting" on noise.
+
+### The descent under-travels by ~6 mm
+
+Commanded -85, arrived -91, twice. Subtract `rig.GRASP_DESCENT_OVERSHOOT` from
+the target before commanding. With that compensation the next grasp caught at
+z=-81.1, stall 642, wiggle 1 px, first attempt and no pressing.
