@@ -197,8 +197,19 @@ def depth_clearance():
         s = depth_mod.sectors(w, h, a)
     except Exception as e:
         return None, None, f"unreadable: {type(e).__name__}: {e}"[:160]
-    near = s.get("nearp")
-    return (None if near is None else near / 10.0), s.get("coverage"), "ok"
+    # USE THE SECTOR YOU ARE DRIVING INTO, NOT THE WHOLE BAND.
+    # sectors()["nearp"] is the 5th percentile of left+centre+right POOLED, so far
+    # surfaces off to the sides dilute a near obstacle dead ahead. Measured
+    # 2026-09-11, standing in front of the lamp: centre 70 cm, pooled 96 cm - the
+    # gate authorised a 1.1 m drive on a number 26 cm more optimistic than the
+    # thing it was about to hit. depth.py's own `clear` CLI already preferred
+    # `center`; this is the gate catching up with it.
+    near = s.get("center")
+    note = "ok (centre sector)"
+    if near is None:
+        near = s.get("nearp")
+        note = "ok (no centre data; pooled band)"
+    return (None if near is None else near / 10.0), s.get("coverage"), note
 
 
 def human_in_frame(frame=None, retries=1):
