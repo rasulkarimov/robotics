@@ -81,6 +81,43 @@ arm looking down, keep the ultrasonic for the horizontal far field, and treat a
 low-coverage reading as "don't know", not "clear". The camera is on the arm, so
 aim first (`nav.py lookout --view deck`) then read.
 
+#### Low coverage on an OBJECT usually means it is too close, not too dark
+
+The costliest hour of 2026-09-11 went here. Coverage on a yellow bag ran 14-30%,
+and I called it dark fabric in shadow. It was not: **85.5% of the bag was nearer
+than the sensor could measure**, and silence was the only thing it could return.
+
+Silence has two causes - a surface that does not reflect, and a surface too close
+to triangulate - and they look identical in one number. The *pattern* separates
+them. Slice the object's pixels by image row and print coverage per band:
+
+    rows 40-119   coverage 0.0%     <- nearest rows, all silent
+    rows 120-359  coverage 6-26%    <- answers, ~240 mm
+    => the near part is inside the blind zone; you are already on top of it
+
+If the NEAR rows are empty and the FAR rows answer, you have arrived. If coverage
+is uniformly poor across near and far alike, then it is the surface.
+
+#### Range an object by its 5th percentile, never its median
+
+Same run, same object: I took the median depth over the bag (541 mm) as "the
+distance to the bag". A big object spans a big depth range, and here only its far
+side had answered at all - so the median described the FAR rim while the near rim
+was already 207 mm away. I concluded the bag was 54 cm off and planned another
+35 cm of driving while the gripper was nearly over it.
+
+You care about the near face - the thing you will hit, or reach for. Use `p05` or
+the minimum over the object's pixels. `sectors()` already does this per third;
+do the same when you mask out a single object.
+
+#### The frame's minimum depth is NOT the sensor's minimum range
+
+Across one evening I quoted "the sensor's minimum range" as ~700 mm, then ~490,
+then ~388, then 207 mm. Every one of those was just the nearest object in view.
+It is never a property of the instrument, and reasoning from it (as I did: "the
+bag returns nothing because it is inside the 70 cm blind zone") builds a whole
+plan on a number that changes when someone walks past.
+
 ## Steering and movement - no odometry, weak steering
 
 - `car.steer(direction, angle)` sets front-wheel angle (10-60°, "center" = 90).
@@ -112,6 +149,78 @@ aim first (`nav.py lookout --view deck`) then read.
   matches) exist for this, though both need enough scene texture/overlap between
   the before/after frames to be reliable - they can fail silently (near-zero
   reported yaw) on a low-texture scene (e.g. camera pointed at a plain curtain).
+
+## Navigate on BEARING, not on distance travelled
+
+The single thing that worked on 2026-09-11's cross-room approach. Bearing to a
+target comes from the camera intrinsics alone:
+
+    bearing_deg = degrees(atan((px - cx) / fx))       # fx=418.33, cx=316.55
+
+No camera model, no pitch, no floor plane, no odometry - just the pixel column.
+It is the one geometric quantity on this robot I have never caught lying.
+
+So: drive a leg, re-measure the target's bearing, correct, repeat. Over six legs
+the bag's bearing went -4.0 -> +9.1 -> +6.3 -> +2.9 -> +8.9 -> +13.3 -> +5.8 ->
+in the groove, and the user freed a jammed wheel TWICE during that without my
+ever losing the target. Dead reckoning would have been destroyed by either jam.
+
+Two cautions:
+- **Convert camera bearing to VEHICLE bearing.** The camera pans with servo 6;
+  `BASE_FORWARD = 470` is straight ahead, 4 units/deg. So
+  `bearing_veh = bearing_cam - (s6 - 470)/4`. Read s6, do not assume it.
+- **Bearing grows as you close in.** A fixed 150 mm lateral offset reads +5.4 deg
+  at 1.5 m and +13 deg at 0.7 m. A growing bearing on a straight run is the
+  geometry working correctly, not a heading drift - do not "correct" it away.
+
+### An object held in the jaws biases the bearing it occludes
+
+The held bar covered the bag's LEFT edge, so the yellow centroid sat right of
+truth and the bearing read +6.3 deg. Panning the camera 5 deg to clear the bar
+gave **+2.9 deg** from the same spot. Before believing a centroid, check whether
+the blob touches the frame edge or the held object; if it does, pan to unocclude
+and re-measure, then subtract the pan.
+
+## Drive distances: measure them, and re-measure after any jam
+
+Rough figures at speed 55, from depth-to-a-fixed-surface used as a ruler:
+
+| pulse | free wheels | one wheel jammed |
+|-------|-------------|------------------|
+| 0.6 s | 5-11 cm     | 11 cm |
+| 1.2 s | **29 cm**   | 21 cm |
+
+Short pulses lose most of their travel to breakaway friction, so they are not a
+fraction of the long ones - 0.6 s is far less than half of 1.2 s.
+
+**Do not write a calibration measured during a jam.** This has now bitten twice:
+on 2026-09-09 the numbers 1.16/0.44/18.21 cm produced a confident "the drive is
+non-linear in duration" that the user retracted ("Колеса были заблокированы"),
+and on 2026-09-11 a wheel jammed again mid-approach. When the user says they have
+freed a wheel, every distance figure taken before that is suspect - say so and
+re-measure rather than quietly keeping it.
+
+## The gate: what it needs, and what to do when it says no
+
+`gated_move.sh {drive|nudge|turn} [--direction ...] -- <car.py args>` is the only
+sanctioned way to move. Clearance required: **drive 25 cm, turn 45 cm, nudge 8 cm**,
+and with no ultrasonic fitted it demands **twice** that from depth alone.
+
+- **The gate reads the CENTRE sector**, i.e. the direction of travel. It used to
+  take the 5th percentile of left+centre+right pooled, which let far surfaces off
+  to the sides dilute an obstacle dead ahead: measured 96 cm where the centre read
+  70. Fixed 2026-09-11. Consequence for you: **aim the camera along the vehicle
+  axis before gating.** A camera panned 5 deg off and pitched 24 deg down feeds
+  the gate a reading of the floor and the furniture beside you, not your path.
+- **`nudge` is the honest category for positioning against the object you are
+  working on.** When the bag was 40 cm away the turn gate correctly refused (45 cm
+  needed), and the last few degrees of alignment came from gated *nudges*, which
+  is exactly what the category is for. It is not a way to sneak a drive past the
+  gate - if you are travelling, it is a drive.
+- **With the ultrasonic removed, the gate refuses every turn where anything is
+  inside 90 cm** - which, in this room, is almost everywhere. That is the concrete
+  answer to "нужен ли ультразвук": yes, not for ranging (it is trusted only under
+  30 cm) but because its presence halves the depth margin the gate demands.
 
 ## Distance/scale illusions from the wrist camera
 

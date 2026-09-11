@@ -180,6 +180,19 @@ GRASP_Z_CLOSE_OFFSET = -5.0   # add to the descent target before clamping
 #
 # To make this task solvable: a bag with a rim under ~10 cm, or one flattened so
 # the opening is wide and low. Not a tuning problem.
+#
+# 2026-09-11: THE SAME BAG, SLUMPED, WAS SOLVED END TO END. The mouth was wide and
+# low, the arm descended 112 mm through it without touching anything, and the bar
+# came to rest on the bottom (contact z=-81.3 against this floor of -75). So the
+# arithmetic above is still correct and the verdict it carried was too broad: it
+# describes an UPRIGHT 20 cm rim, not this bag. Check the bag's present shape
+# before quoting it.
+#
+# And do not measure that shape from a shallow-pitch frame. Estimates of 145, 202
+# and 270 mm were all produced that evening from wrist pitches of 36-47 deg below
+# horizontal, where image-vertical is mostly ground-forward, not height. Stand the
+# tool near vertical (ik_search prefer=185) or measure the rim by descending onto
+# it with place_until_contact.
 BAG_RIM_TOO_TALL_MM = 200
 
 

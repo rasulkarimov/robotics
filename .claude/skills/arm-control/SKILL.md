@@ -439,6 +439,53 @@ the hover puts the HAND where the object appeared, and the object is really
 further out along the ray. Project the ray to the floor, or descend from the pose
 that has the object in view instead of jumping to a new pose family.
 
+### To see INTO something, stand the tool up straight - do not lean in
+
+The camera looks along the tool axis. At a grasp (`ik_search` with `prefer=185`)
+the tool points essentially straight DOWN and the object appears at the closing
+point, which is why eye-in-hand grasping works at all.
+
+On 2026-09-11 I spent an evening inspecting an open bag at s3 = 120-165, i.e. a
+**shallow 36-47 deg below horizontal**, and drew two wrong conclusions from it:
+
+1. I found a dark V-shaped region enclosed by yellow, named it "the bag's mouth"
+   and ranged it at 541 mm. It was the **threshold BEHIND the bag**, seen over the
+   rim. At a shallow pitch, image-up means *further away past the object*, not
+   *higher on the object*, and the two are adjacent in the picture.
+2. I then concluded the camera could not look down at all and wrote off
+   photographing the result. The user's one-line correction settled it: "ты же
+   когда делаешь захват смотришь почти вниз."
+
+**The arithmetic check that would have caught both.** A ray at pitch `θ` below
+horizontal from a camera `H` above the floor cannot return a range beyond
+`H / sin(θ)` - past that it is under the floor. Here H≈200 mm, θ=36 deg, so
+anything over ~340 mm on the optical axis was, by construction, not on the floor
+in front of me. My own numbers said 541. Run this check before you name a feature.
+
+**So, to look into a container:** put the tool near vertical.
+`kin.ik_search(x, y, z, pitch_lo=163, pitch_hi=207, prefer=185)` gives pitch 167-174
+at R=157-160, z=55-80, and from there the wrist camera sees straight down inside.
+That pose produced the direct photograph of the bar lying in the bag - the very
+evidence the 2026-09-09 run was missing.
+
+Note the envelope cost: with the tool held near vertical there is **no IK solution
+above z=+80** at any radius (max_reach(110)=189 mm exists, but not with a
+down-pointing tool). So the camera cannot hover high and peer down; it must come
+down close, and a container with a rim above ~130 mm is inspected from inside it,
+not from above it.
+
+### `kin`'s forward is not the vehicle's forward
+
+`kin.ik` solves `base = atan2(y, x)`, so `y = 0` returns **servo 6 = 500**. But
+`rig.BASE_FORWARD = 470` is what actually points along the car. The two differ by
+30 units = **7.5 deg**, and a plan that aims "straight ahead" by handing `y=0` to
+the kinematics sends the arm 7.5 deg left of the chassis axis.
+
+Convert explicitly:
+
+    OFF = radians((rig.BASE_FORWARD - 500) / rig.BASE_UNITS_PER_DEG)   # -7.5 deg
+    x, y = R * cos(OFF), R * sin(OFF)      # R metres straight ahead of the CAR
+
 
 ### An object at the robot's own base is invisible to both named floor views
 
@@ -510,6 +557,39 @@ contrast-against-plain-floor blob, or a vision-model cell converted to a bearing
 Everything downstream - centring, orientation, wrist rotation, straight descent,
 clamp, wiggle, retry - is already object-agnostic and stays as it is.
 
+
+### Contact height is the only thing that tells a rim from a hole
+
+`rig.py` states that no colour measure can distinguish "over the bag" from "over
+the opening" - from beside a tall rim every frame is the outer wall. True, and the
+way past it is not a better detector but a physical probe.
+
+`pick_eye.place_until_contact(x, y, z_floor)` steps down 6 mm at a time and stops
+the moment the arm *fails to reach* the commanded height, i.e. when something is
+holding it up. Read the two outcomes together:
+
+- **a long descent with NO contact** - the way down is open, you are over the hole.
+  On 2026-09-11 the arm fell 112 mm from z=+73 to z=-40 touching nothing at all.
+- **then contact at or below the nominal floor** - the object reached the bottom.
+  Contact came at z=-81.3 against `GRASP_Z` = -75, matching the good 2026-09-09
+  placement (-76.5 against -72.8).
+
+A rim would have stopped it tens of millimetres up, at the first step. Together
+those two readings are a *placement*, not a drop, and they are evidence you can
+put in the log.
+
+Note `max_mm` caps a single call (default 90 mm). Running out of travel returns
+`contacted=False`, which means "nothing stopped me", NOT "no surface exists" -
+call it again from where it finished rather than concluding anything.
+
+### Photograph the result - it is almost always possible
+
+Both bag placements were first reported on release height and grip readings alone,
+with no picture of the object where it ended up, because the bag sat against the
+chassis and "the camera cannot look down". It can - see the section on standing the
+tool up. Go back to the release bearing at R≈157, z≈55, take the frame, and check
+the object is there with the container's wall on every side of it. Thirty seconds,
+and it is the difference between a verified run and an argued one.
 
 ### Putting an object DOWN is a descent, not a release at whatever height you are
 

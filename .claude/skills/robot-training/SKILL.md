@@ -141,6 +141,41 @@ low box: the box was not in frame at the moment the jaws opened. If the target
 cannot be seen together with the jaws, back off 20 cm first and look — that is
 what finally showed where the sock had landed.
 
+### 2026-09-11: the procedure that actually put the bar inside
+
+Superseding the guesswork above. Four steps, each producing a number you can log:
+
+1. **Approach on bearing, not on distance.** Re-measure the target's pixel column
+   after every leg and correct. Bearing needs only `fx`/`cx`; it survived two
+   jammed wheels mid-run. See car-control.
+2. **Swing the base until the target sits under the held object's column.** The
+   held bar is fixed in the image, so this is a pixel comparison, not a 3D
+   estimate: bag centroid was 18.3 deg left of the bar; 20.5 deg of base rotation
+   closed it. (Rotation near the target also translates the camera, so the effect
+   is smaller than the command — 9.25 deg of base gave 6 deg of closure. Iterate.)
+3. **`place_until_contact` decides rim vs hole.** 112 mm of free descent, then
+   contact at z=-81.3 against a floor of -75. See arm-control.
+4. **Release to 515 (not wide), verify the grip moved (635 → 526), lift
+   VERTICALLY, then photograph the object where it lies.**
+
+Note on `goto_vertical`: lifting straight up out of a container gets refused
+partway (it pulls R inward toward `R_MIN_CHASSIS` — the documented failure). Lift
+in absolute `goto` steps that grow R as z rises: (170,10) → (180,40) → (175,60).
+
+### The 20 cm rim verdict was about the bag's SHAPE, not the task
+
+`rig.BAG_RIM_TOO_TALL_MM = 200` says clearing a 20 cm rim leaves a 5 mm corridor
+between `R_MIN_CHASSIS` and the edge of the envelope, and calls the task
+unsolvable. That stands as arithmetic. But the same bag, **slumped so the mouth is
+wide and low**, was solved end to end on 2026-09-11 — the arm never had to clear a
+rim at all, it descended straight through an opening wider than the gripper.
+
+So read that constant as "an upright 20 cm rim is out of reach", not "this bag is
+out of reach". Before believing it, check the bag's present shape. And do not
+measure that shape from a shallow-pitch frame: my "the rim is 145 mm / 202 mm /
+270 mm" estimates that evening were all the bag's extent ALONG THE GROUND read as
+height, because at 36-47 deg of pitch image-vertical is mostly ground-forward.
+
 ## The fetch chain, with the numbers that worked
 
 Run end to end on 2026-08-29 (sock → box at the balcony door). Follow it in this
@@ -256,6 +291,13 @@ So a distance MAY be written when, and only when, it is quoted with its source:
   coverage**. Coverage IS the confidence: measured live, a bearing at 3% coverage
   read "1.28 m" and meant nothing, while the same sweep's 78% bearing read 0.39 m
   and was the sofa. **Below ~15% coverage, write "no depth", not a number.**
+  Two riders added 2026-09-11, both bought with a wasted hour:
+  **(a)** low coverage on a specific OBJECT usually means it is too CLOSE to
+  measure, not too dark — slice its pixels by image row and look at which bands
+  are silent before you interpret it;
+  **(b)** for an object, quote the **5th percentile**, never the median: the
+  median of a large object describes its far side, and mine said 541 mm about a
+  bag whose near rim was at 207 mm.
 - `car.py ultrasonic` - quote the reading. And check it is not frozen first
   (`safety.py clearance` reports `sonic_stuck`); on 2026-09-09 it returned
   173.502 cm on fifteen reads across 140 deg of pan.
@@ -263,6 +305,10 @@ So a distance MAY be written when, and only when, it is quoted with its source:
 Depth returns nothing closer than ~15 cm or past ~4 m, so an object at the
 robot's own base still has no measurable distance - that is a "no depth", not a
 guess. Otherwise describe WHAT you see and WHERE in the frame.
+
+And never quote **a frame's minimum depth as the sensor's minimum range**. It is
+just the nearest object in view; across one evening mine read 699, then 490, then
+388, then 207 mm. I took the first as a specification and built a plan on it.
 
 Never append a second header, and never reorder the columns. On 2026-08-30 a run
 wrote its own header mid-file plus rows in two different layouts; the file stopped
@@ -279,6 +325,37 @@ and the lead had to reconstruct it from the journal.
 
 Then update `training_state.json`. A step is only "passed" when its criterion is
 met by the tally in that file — not by a good feeling about the last run.
+
+## The recurring failure: naming a measurement, then never testing the name
+
+This is the same mistake four times now, and it is worth more attention than any
+single technique in this file.
+
+| what I named it | what it was | what betrayed it |
+|---|---|---|
+| "distance is non-linear in duration" (2026-09-09) | two wheels mechanically jammed | the user, not me |
+| "the drive is stuck" / "direction is inverted" (2026-09-09) | the gate had REFUSED the move; nothing had run | the exit code I did not read |
+| "low depth coverage = dark fabric" (2026-09-11) | 85% of the object was too close to measure | coverage per image row |
+| "the dark V is the bag's mouth" (2026-09-11) | the threshold behind the bag | range·sin(pitch) > camera height |
+
+The shape is always the same: a reading arrives, I attach an interpretation, and
+then I reason for an hour from the interpretation while never once testing it
+against something independent. The data to catch it was in hand every time.
+
+**The habit that fixes it.** Before building on any named quantity, spend one
+line on a check that could falsify the NAME, not refine the number:
+
+- a geometric bound — `range·sin(pitch) ≤ camera_height`, or the point is not on
+  the floor in front of you;
+- a second sensor — sonar 46 cm against depth 48 cm agreed; sonar 26 cm against a
+  claimed 54 cm did not, and I ignored it;
+- a pattern rather than a scalar — coverage BY ROW, not coverage;
+- "did this actually happen?" — the exit code, the servo readback, the grip value.
+
+And when the check cannot be made: say the name is provisional. Today's honest
+version — "the camera pitch does not solve, so I will not range by floor plane,
+I will range by raw depth on the object" — was right, and led straight to the
+useful measurement.
 
 ## When you are stuck
 
