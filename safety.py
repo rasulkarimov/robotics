@@ -312,6 +312,21 @@ def preflight(action, skip_human=False, direction="forward", rear_cm=None):
     close = {a: d for a, d in readable.items() if d < SONAR_TRUST_CM}
     report["sonar_close_cm"] = close or None
     report["direction"] = direction
+
+    # THE BUMPER CAN BE ABSENT, AND THAT MUST NOT BE SILENT.
+    # The user physically removed the ultrasonic on 2026-09-11. Every bearing then
+    # returns 0.0, _sonic_once maps that to None, `readable` is empty - and this
+    # gate happily returned CLEAR with no mention of it. The old "no ultrasonic
+    # bearing answered" unknown was lost when the sonar was demoted to a bumper
+    # and the dead branch around it was deleted.
+    #
+    # Demoting it was right; losing the notice was not. Depth is the primary
+    # sense, but it is blind inside ~15 cm and returns nothing off glass - which
+    # is precisely the pair of cases the bumper existed to cover. Driving with
+    # neither is a real gap, so say so, and refuse unless depth is BOTH
+    # well-covered and reporting generous room.
+    report["sonar_present"] = bool(readable)
+
     if close and not stuck and direction == "forward":
         nearest = min(close.values())
         # SONAR_TRUST_CM decides which readings are BELIEVABLE; `need` decides
@@ -374,6 +389,22 @@ def preflight(action, skip_human=False, direction="forward", rear_cm=None):
                     f"{DEPTH_MIN_COVERAGE * 100:.0f}% (is the arm folded and looking "
                     "at the near floor?) and the ultrasonic does not independently "
                     "show generous room")
+
+    # Resolve the absent-bumper rule now that the depth figures exist.
+    if not report.get("sonar_present"):
+        cov = report.get("depth_coverage")
+        dm = report.get("depth_cm")
+        strong = (cov is not None and cov >= DEPTH_MIN_COVERAGE
+                  and dm is not None and dm >= 2 * need)
+        if strong:
+            report["note_no_bumper"] = (
+                f"ultrasonic absent; proceeding on depth alone ({dm:.0f} cm at "
+                f"{cov*100:.0f}% coverage). Blind inside ~15 cm and to glass.")
+        else:
+            report["unknown"].append(
+                "ultrasonic absent (no bearing answered) and depth is not "
+                f"independently strong (cm={dm}, coverage={cov}). Nothing is "
+                "watching the close range or glass.")
 
     if skip_human:
         report["human"] = "skipped"
