@@ -138,7 +138,17 @@ CLAW_IS_FIXED_IN_IMAGE = True
 #     # find the 2 red jaw markers (HSV ~[0-15]&[165-180], S>60, V>50, area>150);
 #     # the midpoint of the two centroids IS the closing point for this pose.
 # The residual pose-to-pose variation is small; the mounting-to-mounting drift is not.
-GRASP_PIXEL = (170.0, 146.0)   # midpoint of the two jaw markers with the jaws CLOSED
+#
+# DID NOT DO THIS AT THE START OF THE SESSION AND PAID FOR IT AGAIN. 2026-09-12: repeated
+# the exact 2026-07-26 mistake this comment already warned about. Spent an evening chasing
+# dx/dy against the stale (170,146), got "beautiful convergence" (dx down to single digits)
+# from see(), and every clamp came back empty (678-682, the baseline). The user caught it
+# from a side photo - the bar sitting entirely under the RIGHT jaw, the left jaw over bare
+# floor - "Ты криво берёшь. Проверь настройки." Re-measured with jaws closed on nothing:
+# true midpoint (318.1, 294.5), a +148/+148 px drift from this constant. The aim loop was
+# converging perfectly onto the wrong point the whole time, exactly as predicted below.
+GRASP_PIXEL = (318.1, 294.5)   # midpoint of the two jaw markers with the jaws CLOSED
+                                # re-measured 2026-09-12 (was 170.0, 146.0 - STALE, see above)
 
 # Blob-detection constants are VIEW-DEPENDENT and were all silently wrong after the camera
 # moved to the wrist - each one threw away the very markers it was meant to find:

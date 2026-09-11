@@ -213,6 +213,27 @@ two red markers, take the midpoint) and `tanggrab.grasp_bar()` now calls it
 automatically. For any NEW grasp code, measure once per session. If grasps fail
 while the aim looks good, suspect this before anything else.
 
+**REPEATED THIS EXACT MISTAKE ON 2026-09-12,** verbatim, in a session that had
+this file open the whole time. Five clamps in a row came back empty (678-682)
+while dx against the stale `GRASP_PIXEL=(170,146)` read -7 to 11px - textbook
+convergence onto the wrong point, exactly as described above. What it took to
+catch it, again: the user's photo, not the telemetry - "the bar sitting entirely
+under one jaw, the other over bare floor" ("Ты криво берёшь. Проверь
+настройки"). True midpoint measured live: `(318.1, 294.5)` - drifted **+148/+148
+px** in one session. A downstream symptom this caused and is worth recognising
+on its own: with the wrong target, correcting dy looked like it needed reach (R)
+changes right at `R_MIN_CHASSIS`, which is genuinely dangerous - after the
+re-measurement dy needed no R chasing at all (it was +17..+39, not -100..-157).
+A stale GRASP_PIXEL doesn't just miss the grasp - it can manufacture a false
+need to fly close to the chassis limit chasing an axis that was never really
+the problem.
+
+So: **call `pick_eye.measure_grasp_pixel()` at the start of the session, before
+the first grasp attempt, unconditionally** - not "if a grasp looks wrong", by
+which point several may have already failed. Do not hand-roll the marker-midpoint
+math inline (as this rep did, three separate times) instead of calling the
+function that already exists for it.
+
 **Take the median of three.** The first reading after a move is regularly an
 outlier — (218,255) then (188,354) at one pose — because the arm is still
 settling. Median-of-3 cut the spread from 100+ px to ~5 px.
