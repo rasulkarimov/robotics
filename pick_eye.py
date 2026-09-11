@@ -166,15 +166,33 @@ def goto_verified(x, y, z, ms=1200, tol_mm=2.5, max_corrections=1):
     return current_xyz()
 
 
+def _read_servo(n, retries=3, delay=0.4):
+    """arm.py get can come back with empty stdout on a transient USB/serial hiccup
+    ("Function 'getPosition' recv error" - the same glitch documented in the
+    car-control skill for the servo bus). 2026-09-11: goto() started calling
+    current_xyz() after EVERY move to catch chassis-limit drift, and the very
+    first live use hit this - int('') crashed mid-descent with the arm's
+    position and the bar's grip both unknown for a moment. Retry before giving
+    up; a transient read failure is not the same as the servo being gone."""
+    for attempt in range(retries):
+        out = subprocess.run([ARM, "get", str(n)], capture_output=True, text=True).stdout.strip()
+        try:
+            return int(out)
+        except ValueError:
+            if attempt + 1 == retries:
+                raise RuntimeError(f"servo {n}: unreadable after {retries} tries "
+                                    f"(last output: {out!r}) - check the arm is alive "
+                                    f"before trusting any position")
+            time.sleep(delay)
+
+
 def current_xyz():
     """Where the grasp point actually is, from the servos rather than the command.
 
     NOTE kin.fk returns (x, y, z) - not (R, z). Reading it as the latter cost an
     evening of reports that halved every height.
     """
-    j = {n: int(subprocess.run([ARM, "get", str(n)],
-                               capture_output=True, text=True).stdout.strip())
-         for n in (3, 4, 5, 6)}
+    j = {n: _read_servo(n) for n in (3, 4, 5, 6)}
     return kin.fk(j[5], j[4], j[3], j[6])
 
 
