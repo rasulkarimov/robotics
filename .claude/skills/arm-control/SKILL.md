@@ -298,6 +298,34 @@ section above does. Verify the sign live before committing a correction; a few
 seconds nudging and re-measuring is cheaper than a correction that doubles the
 error.
 
+### Aim at the CLAMP height - an aim taken from the hover is stale by 36 mm
+
+2026-09-12, measured on one bar without touching it between readings:
+
+    at z = +41  (survey height)   dx = -4 px    = 1.7 mm off
+    at z = -76  (clamp height)    dx = -100 px  = 38 mm off
+
+A 117 mm descent moved the apparent aim by 36 mm. The wrist pitch is never
+exactly vertical, so the camera travels its own arc on the way down and the
+object slides across the frame. Nothing is wrong with the aim; it is simply
+being read at the wrong altitude.
+
+This is why `descend_and_clamp()` can fail on a textbook aim: it descends and
+closes in one breath, so whatever you measured above it is already stale. The
+failure looks identical to a stale `GRASP_PIXEL` - empty stall, beautiful
+convergence in the log - and is a different bug with a different fix.
+
+**The sequence that catches:**
+
+1. descend to the clamp height FIRST,
+2. re-measure dx THERE,
+3. correct with the BASE only - rotation does not change R, so it cannot walk
+   into `R_MIN_CHASSIS`, which reach corrections repeatedly did,
+4. close with `arm_step("1:700")` and NO further vertical move.
+
+Done this way the same bar caught first try: stall 643 against a 676-687 empty
+baseline, wiggle 4.0/6.7 px.
+
 ### Aim at the height where the jaws will close, not from the hover
 
 The closing point is fixed in the image, but the OBJECT's pixel is not — it moves

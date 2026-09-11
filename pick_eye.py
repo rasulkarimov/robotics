@@ -242,6 +242,31 @@ def descend_and_clamp(R, bear, log=print):
        under-travels: asked -85, arrived -91, twice running.
     3. Refuse below rig.GRASP_Z_HARD_FLOOR whatever the arithmetic says.
 
+    4. AIM AT THE CLAMP HEIGHT, NOT ABOVE IT - added 2026-09-12, and it explains
+       a whole evening of empty clamps that rule 1 correctly refused to rescue.
+       THIS FUNCTION DESCENDS BEFORE IT CLOSES, so an aim taken at the survey
+       height is stale by the time the jaws move. Measured on one object without
+       touching it in between:
+
+           at z = +41  the bar read dx = -4 px   (1.7 mm off)
+           at z = -76  the same bar read dx = -100 px  (38 mm off)
+
+       A 117 mm descent moved the apparent aim by 36 mm, because the wrist pitch
+       is never exactly vertical and the camera swings along its own arc. Aiming
+       high and then calling this function is therefore a coin flip: the caller
+       sees "beautiful convergence" and the clamp still shuts on air, which looks
+       exactly like the stale-GRASP_PIXEL failure and is a different bug.
+
+       So the sequence that actually catches is: descend FIRST, re-measure dx at
+       the clamp height, correct with the base only (rotation does not change R,
+       so it cannot walk into R_MIN_CHASSIS), and close WITHOUT any further
+       vertical move. Done that way the same object caught first try - stall 643
+       against a 676-687 empty baseline, wiggle 4.0/6.7 px.
+
+       This function cannot do that on its own (it descends and clamps in one
+       breath). Prefer it only when the aim was already taken near the clamp
+       height; otherwise drive the descent yourself and clamp with arm_step.
+
     Returns (z_reached, stall, caught) - or (z, None, False) if it refused.
     """
     cmd_z = rig.GRASP_Z_TARGET + rig.GRASP_DESCENT_OVERSHOOT
