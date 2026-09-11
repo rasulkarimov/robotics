@@ -106,6 +106,33 @@ def goto(x, y, z, ms=1200):
         return False
     _last_pitch = sol["pitch"]
     arm_step(",".join(f"{j}:{sol[j]}" for j in (6, 5, 4, 3)), ms)
+
+    # THE COMMAND CAN BE SAFE AND THE RESULT NOT. _inside_chassis above only
+    # checked the REQUESTED (x, y); it never re-checks where the servos actually
+    # landed. Measured 2026-09-11: commanded R=150.6mm (safe, passed the check
+    # above), a -8mm reach correction at fixed pitch arrived at R=138.5mm -
+    # inside rig.R_MIN_CHASSIS - because that is exactly the "correction pulls
+    # the solution inward" trap goto_verified()'s own docstring warns about.
+    # Nothing had been re-checking the RESULT, so it went unnoticed until a
+    # manual margin check outside this function caught it at -1.5mm to spare.
+    # Check now, and retreat rather than sit there scratching the chassis.
+    ax, ay, az = current_xyz()
+    r_actual = math.hypot(ax, ay)
+    if r_actual < rig.R_MIN_CHASSIS:
+        print(f"  ВНИМАНИЕ goto: команда была безопасной, но пришёл на "
+              f"R={r_actual:.0f} мм - внутри предела {rig.R_MIN_CHASSIS:.0f} мм. "
+              f"Отступаю, а не остаюсь.")
+        bear = math.atan2(ay, ax)
+        retreat_r = rig.R_MIN_CHASSIS + 15.0
+        retreat_sol = kin.ik_search(retreat_r * math.cos(bear), retreat_r * math.sin(bear), az,
+                                     pitch_lo=FIXED_PITCH - PITCH_BAND,
+                                     pitch_hi=FIXED_PITCH + PITCH_BAND, prefer=FIXED_PITCH)
+        if retreat_sol:
+            arm_step(",".join(f"{j}:{retreat_sol[j]}" for j in (6, 5, 4, 3)), ms)
+        else:
+            print("  ОТСТУПЛЕНИЕ НЕ НАЙДЕНО ПО IK - поднимаю вертикально вместо этого")
+            goto_vertical(ax, ay, az + 60.0, ms)
+        return False
     return True
 
 

@@ -238,6 +238,45 @@ R=150 by nudging and watching the blob:
 Both numbers are position-specific: re-derive after any remount. A wrong sign and
 a wrong gain are indistinguishable from the aim error alone.
 
+### `_inside_chassis` checked the wrong point, and nearly cost the chassis
+
+2026-09-11, repeating the grasp drill: correcting dy by hand, `goto()` was given a
+command that computed to a safe R=150.6mm — `_inside_chassis` passed it — and the
+arm arrived at **R=138.5mm**, inside `rig.R_MIN_CHASSIS`, with the margin at
+**-1.5mm**. An 8mm commanded reduction produced a 20mm actual one: the same
+"correction pulls the solution inward at fixed pitch" trap `goto_verified()`'s
+docstring already names, just not caught this time because nothing was re-checking
+the *result*.
+
+The gap was structural: `_inside_chassis` only ever saw the requested `(x, y)`,
+never where the servos actually landed. **Fixed in `goto()` itself** — it now
+calls `current_xyz()` after every move, and if the arrived point is inside
+`R_MIN_CHASSIS` despite a safe commanded point, retreats along the same bearing to
+`R_MIN_CHASSIS + 15mm` and returns `False` instead of sitting there. This closes
+the gap for every caller (the aim loop, `descend_and_clamp`, manual scripts) at
+the one place they all pass through — but as of this writing it has not actually
+fired against a real undertravel; it was verified by syntax check and import
+only. Keep watching the margin by hand near the limit until it has.
+
+**Lesson underneath the code fix:** when correcting a small residual (dy, in this
+case) puts you within ~10mm of a hard limit, stop nudging in small deltas and
+either (a) send ONE absolute `goto_verified` and check the actual result before
+committing further, or (b) accept the residual and let the downstream check (here,
+the wiggle test) be the arbiter — don't chase a pixel-perfect correction into a
+zone where the solver's own drift is bigger than the error you're correcting.
+`rig.RADIUS_GAIN_MIN_USABLE` already said this about the gain being unreliable;
+this is the same advice from the safety side.
+
+### Base rotation's effect on the image is not always the sign you'd guess
+
+Nudging servo6 UP moved the object's pixel **right** in frame (dx became more
+negative), even though rig.py's own note says "servo 6 UP → claw swings LEFT" —
+that note describes the physical swing, and the mapping from physical swing to
+image-column sign still needs its own check, the same way the R→dy sign in the
+section above does. Verify the sign live before committing a correction; a few
+seconds nudging and re-measuring is cheaper than a correction that doubles the
+error.
+
 ### Aim at the height where the jaws will close, not from the hover
 
 The closing point is fixed in the image, but the OBJECT's pixel is not — it moves
