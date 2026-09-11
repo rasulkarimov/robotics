@@ -162,6 +162,38 @@ Note on `goto_vertical`: lifting straight up out of a container gets refused
 partway (it pulls R inward toward `R_MIN_CHASSIS` — the documented failure). Lift
 in absolute `goto` steps that grow R as z rises: (170,10) → (180,40) → (175,60).
 
+### Step 0, added 2026-09-12: HOW FAR THE CHASSIS STILL HAS TO GO
+
+The step the procedure above was missing, and the one that keeps going wrong.
+"The bag looks close in the wrist frame" is not a measurement — on this errand it
+was wrong three times running, and each time the user had to say so
+("Ты почти метр не доехал"). Depth cannot help: at this range the bag's near face
+is inside the sensor's blind zone, so the only returns come from the wall behind
+it. Sonar cannot answer it either — see below.
+
+**The criterion that works.** From the near-vertical look-down pose, mask the bag
+and find the held object's topmost row, then compute:
+
+    fraction of the bag's yellow lying ABOVE the held object's tip
+
+That is "how much of the bag is still beyond where I am", and it must fall to
+about **50%** — at which point the object's tip is over the middle of the mouth.
+Measured across three nudges this errand: **85% → 70% → 58% → 44%**, and the bag's
+own pixel area grew 71765 → 93076 → 109361 alongside it.
+
+It costs one frame and no camera model — no depth, no floor plane, no pitch.
+
+**It doubles as a did-the-chassis-actually-move check.** An earlier 0.6 s pulse
+moved the bag's area 8465 → 8883 px, i.e. not at all (breakaway friction eats a
+short pulse), and the framing looked identical — which I nearly read as arrival.
+If the fraction and the area both sit still, the robot did not move; drive longer,
+do not conclude you are there.
+
+**And sonar does not answer this question.** It read 18-20 cm at a point where
+the chassis was still a metre short (it was ranging the door frame), and 7.4 cm
+when correctly positioned (the bag itself). A small sonar number means *something
+is close*, never *I have arrived at the target*.
+
 ### The 20 cm rim verdict was about the bag's SHAPE, not the task
 
 `rig.BAG_RIM_TOO_TALL_MM = 200` says clearing a 20 cm rim leaves a 5 mm corridor
