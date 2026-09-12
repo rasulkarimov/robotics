@@ -571,8 +571,13 @@ def see():
 
 # Jaw markers are ~2500-3300 px at grasping distance (rig.py). The window is generous on
 # both sides for lighting/partial occlusion, but MUST exclude background objects.
-MARKER_AREA_MIN, MARKER_AREA_MAX = 800, 12000
+MARKER_AREA_MIN, MARKER_AREA_MAX = 300, 12000
 MARKER_AREA_RATIO = 4.0   # the two markers are the same size; a big mismatch means an impostor
+# The markers ride on the jaws, and the jaws are fixed in the image (rig.CLAW_IS_FIXED_IN_IMAGE),
+# so the markers are always in the bottom part of the frame - measured y = 295..315 across every
+# pose on the Aurora camera. Anything red ABOVE this row is background, and there is plenty of
+# it: the warm floor lamp passes the red/orange mask as a 75000 px blob.
+MARKER_MIN_ROW = 250
 
 
 def measure_grasp_pixel(restore_grip=OPEN, samples=3):
@@ -612,6 +617,7 @@ def _measure_grasp_pixel_once(restore_grip=OPEN):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     m = (cv2.inRange(hsv, np.array([0, 60, 50]), np.array([15, 255, 255])) |
          cv2.inRange(hsv, np.array([165, 60, 50]), np.array([180, 255, 255])))
+    m[:MARKER_MIN_ROW, :] = 0                    # background red lives up here; markers never do
     cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     blobs = []
     for c in cnts:
@@ -627,7 +633,8 @@ def _measure_grasp_pixel_once(restore_grip=OPEN):
         M = cv2.moments(c)
         if M["m00"] == 0:
             continue
-        blobs.append((a, M["m10"] / M["m00"], M["m01"] / M["m00"]))
+        bx, by, bw, bh = cv2.boundingRect(c)
+        blobs.append((a, M["m10"] / M["m00"], M["m01"] / M["m00"], bx + bw / 2.0))
     arm_step(f"1:{restore_grip}", 700)
 
     # Take the two BIGGEST qualifying blobs and use their midpoint. Do NOT split the frame
@@ -636,8 +643,22 @@ def _measure_grasp_pixel_once(restore_grip=OPEN):
     # i.e. both LEFT of centre - the half-split found nothing on the right and the whole
     # measurement failed, silently falling back to the stale stored constant.
     blobs.sort(key=lambda b: -b[0])
-    if len(blobs) < 2:
+    if not blobs:
         return None
+    # WITH THE JAWS CLOSED THE TWO MARKERS TOUCH AND MERGE INTO ONE CONTOUR on the Aurora
+    # camera (measured 2026-09-12: one blob of 1777-1912 px, about the sum of the two
+    # separate markers). The old code demanded two blobs, so it either returned None or paired
+    # the merged marker with a piece of the lamp.
+    #
+    # Use the merged blob's BOUNDING-BOX centre for x, NOT its pixel centroid. The closing
+    # point is where the jaws meet - the geometric middle of the pair - but the two markers
+    # are seen at unequal sizes (1296 vs 770 px at the grasp pose), so the pixel centroid is
+    # dragged towards the bigger one: 304.7 against a true midpoint of 312.5. The same bias
+    # would make an area-weighted midpoint wrong for two separate blobs, which is why that
+    # case below stays a plain average. y is the same for both markers, so the centroid is fine.
+    if len(blobs) == 1:
+        rig.GRASP_PIXEL = (blobs[0][3], blobs[0][2])
+        return rig.GRASP_PIXEL
     a, b = blobs[0], blobs[1]
     # Sanity: the two markers are the same physical size, so wildly unequal areas mean one of
     # them is not a marker.

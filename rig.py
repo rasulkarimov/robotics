@@ -147,7 +147,7 @@ CLAW_IS_FIXED_IN_IMAGE = True
 # floor - "Ты криво берёшь. Проверь настройки." Re-measured with jaws closed on nothing:
 # true midpoint (318.1, 294.5), a +148/+148 px drift from this constant. The aim loop was
 # converging perfectly onto the wrong point the whole time, exactly as predicted below.
-GRASP_PIXEL = (318.1, 294.5)   # midpoint of the two jaw markers with the jaws CLOSED
+GRASP_PIXEL = (310.0, 311.3)   # midpoint of the two jaw markers with the jaws CLOSED
                                 # re-measured 2026-09-12 (was 170.0, 146.0 - STALE, see above)
 
 # Blob-detection constants are VIEW-DEPENDENT and were all silently wrong after the camera
